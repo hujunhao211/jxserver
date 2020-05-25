@@ -16,14 +16,14 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-//#include <byteswap.h>
-//#include <endian.h>
+#include <byteswap.h>
+#include <endian.h>
 #define SIZE (20)
 #define SERVER_MSG ("Hello User ! Welcome to my server!\n")
-#include <libkern/OSByteOrder.h>
-#define bswap_16(x) OSSwapInt16(x)
-#define bswap_32(x) OSSwapInt32(x)
-#define bswap_64(x) OSSwapInt64(x)
+//#include <libkern/OSByteOrder.h>
+//#define bswap_16(x) OSSwapInt16(x)
+//#define bswap_32(x) OSSwapInt32(x)
+//#define bswap_64(x) OSSwapInt64(x)
 
 typedef struct node{
     struct node* next;
@@ -144,7 +144,7 @@ void *connection_handler(void *argv){
         message.header.compression_bit = get_five_digit(buffer);
         message.header.require_bit = get_six_digit(buffer);
         uint64_t v = message.pay_load_length;
-        message.pay_load_length = bswap_64(message.pay_load_length);
+        message.pay_load_length = be64toh(message.pay_load_length);
         message.pay_load = malloc(message.pay_load_length);
 //        printf("type_digit: %x\n",(int)message.header.type_digit);
 //        printf("%x\n",message.pay_load_length);
