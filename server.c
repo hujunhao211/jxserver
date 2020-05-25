@@ -128,7 +128,7 @@ void *connection_handler(void *argv){
     if (!data->queue->shutdown_flag){
         while (1) {
     //        printf("1\n");
-             printf("here\n");
+//             printf("here\n");
             message_t message = {0};
             unsigned char buffer = 0;
             long number = recv(data->socket_fd, &buffer, 1, 0);
