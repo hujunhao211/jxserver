@@ -128,6 +128,7 @@ void *connection_handler(void *argv){
     struct connect_data *data = argv;
     while (1) {
 //        printf("1\n");
+         printf("here\n");
         message_t message = {0};
         unsigned char buffer = 0;
         long number = recv(data->socket_fd, &buffer, 1, 0);
@@ -151,6 +152,7 @@ void *connection_handler(void *argv){
         if (message.pay_load_length > 0)
             recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
         if(message.header.type_digit == 0x00){
+            printf("here echo\n");
             message.header.type_digit = 0x1;
             unsigned char header = transform_header(message);
             write(data->socket_fd, &header, sizeof(header));
@@ -287,7 +289,6 @@ int main(int argc, char** argv){
         enqueue(queue, d);
         pthread_cond_signal(&queue->queue_con);
         pthread_mutex_unlock(&queue->queue_lock);
-        printf("here\n");
 //        pthread_t thread;
 //        pthread_create(&thread, NULL, connection_handler, d);
     }
