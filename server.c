@@ -159,17 +159,17 @@ void *connection_handler(void *argv){
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
             } else if(message.header.type_digit == 2){
-    //            printf("2\n");
+                printf("2\n");
             } else if(message.header.type_digit == 4){
-    //            printf("4\n");
+                printf("4\n");
             } else if(message.header.type_digit == 6){
-    //            printf("6\n");
+                printf("6\n");
             } else if(message.header.type_digit == 8){
                 printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
             } else {
-                printf("?\n");
+//                printf("?\n");
                 // Send it using exactly the same syscalls as for other file descriptors
                 message.header.type_digit = 0xf;
                 unsigned char header = transform_header(message);
