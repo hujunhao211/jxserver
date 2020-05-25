@@ -278,7 +278,6 @@ int main(int argc, char** argv){
     while (1) {
         uint32_t addrlen = sizeof(struct sockaddr_in);
         clientsocket_fd = accept(serversocket_fd, (struct sockaddr*)&address, &addrlen);
-        printf("here\n");
         struct connect_data *d = malloc(sizeof(struct connect_data));
         d->socket_fd = clientsocket_fd;
         d->msg = SERVER_MSG;
@@ -288,6 +287,7 @@ int main(int argc, char** argv){
         enqueue(queue, d);
         pthread_cond_signal(&queue->queue_con);
         pthread_mutex_unlock(&queue->queue_lock);
+        printf("here\n");
 //        pthread_t thread;
 //        pthread_create(&thread, NULL, connection_handler, d);
     }
