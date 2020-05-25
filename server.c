@@ -166,7 +166,7 @@ void *connection_handler(void *argv){
             } else if(message.header.type_digit == 6){
     //            printf("6\n");
             } else if(message.header.type_digit == 8){
-                printf("8\n");
+    //            printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
             } else {
@@ -246,6 +246,7 @@ void free_queue(linked_queue_t *queue){
         free(data->msg);
         free(data);
     }
+    free(queue);
 }
 
 
