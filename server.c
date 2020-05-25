@@ -36,6 +36,7 @@ typedef struct linked_queue{
     pthread_mutex_t queue_lock;
     pthread_cond_t queue_con;
     int shutdown_flag;
+    char *msg;
 }linked_queue_t;
 
 typedef struct b_file{
@@ -47,8 +48,6 @@ typedef struct b_file{
 
 struct connect_data{
     int socket_fd;
-    char *msg;
-    size_t msg_len;
     struct linked_queue* queue;
 };
 
@@ -243,9 +242,9 @@ linked_queue_t* initialisze_queue(){
 void free_queue(linked_queue_t *queue){
     while (queue->head != NULL) {
         struct connect_data *data = dequeue(queue);
-        free(data->msg);
         free(data);
     }
+    free(queue->msg);
     free(queue);
 }
 
@@ -289,6 +288,7 @@ int main(int argc, char** argv){
     }
     linked_queue_t *queue = initialisze_queue();
     pthread_t *pthreads = calloc(SIZE, sizeof(pthread_t));
+    queue->msg = file->message;
     for (int i = 0; i < SIZE; i++) {
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
@@ -299,8 +299,6 @@ int main(int argc, char** argv){
         clientsocket_fd = accept(serversocket_fd, (struct sockaddr*)&address, &addrlen);
         struct connect_data *d = malloc(sizeof(struct connect_data));
         d->socket_fd = clientsocket_fd;
-        d->msg = strdup(file->message);
-        d->msg_len = strlen(file->message);
         d->queue = queue;
         pthread_mutex_lock(&queue->queue_lock);
         enqueue(queue, d);
@@ -316,7 +314,6 @@ int main(int argc, char** argv){
         }
     }
     free_queue(queue);
-    free(file->message);
     free(file);
     close(serversocket_fd);
     return 0;
