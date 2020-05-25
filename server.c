@@ -165,11 +165,11 @@ void *connection_handler(void *argv){
             } else if(message.header.type_digit == 6){
     //            printf("6\n");
             } else if(message.header.type_digit == 8){
-    //            printf("8\n");
+                printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
             } else {
-    //            printf("?\n");
+                printf("?\n");
                 // Send it using exactly the same syscalls as for other file descriptors
                 message.header.type_digit = 0xf;
                 unsigned char header = transform_header(message);
