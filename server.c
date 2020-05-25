@@ -18,13 +18,25 @@
 #include <pthread.h>
 #include <byteswap.h>
 #include <endian.h>
+#define SIZE (20)
 #define SERVER_MSG ("Hello User ! Welcome to my server!\n")
 //#include <libkern/OSByteOrder.h>
 //#define bswap_16(x) OSSwapInt16(x)
 //#define bswap_32(x) OSSwapInt32(x)
 //#define bswap_64(x) OSSwapInt64(x)
 
+typedef struct node{
+    struct node* next;
+    struct connect_data* connect_date;
+}node_t;
 
+typedef struct linked_queue{
+    struct node *head;
+    struct node *tail;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_con;
+    int shutdown_flag;
+}linked_queue_t;
 
 typedef struct b_file{
     uint32_t ip_v4_address;
@@ -32,10 +44,12 @@ typedef struct b_file{
     char *message;
 }b_file_t;
 
+
 struct connect_data{
     int socket_fd;
     char *msg;
     size_t msg_len;
+    struct linked_queue* queue;
 };
 
 typedef struct package{
@@ -50,6 +64,45 @@ typedef struct message{
     char *pay_load;
 }message_t;
 
+typedef struct huffman_tree_node{
+    uint8_t bytes;
+    struct huffman_tree_node *left;
+    struct huffman_tree_node *right;
+    int is_external;
+    
+}tree_node_t;
+
+typedef struct huffman_tree{
+    struct huffman_tree_node *root;
+}huffman_tree_t;
+
+void enqueue(linked_queue_t *queue, struct connect_data* data){
+    node_t *newnode = malloc(sizeof(node_t));
+    newnode->connect_date = data;
+    newnode->next = NULL;
+    if (queue->tail == NULL){
+        queue->head = newnode;
+    } else{
+        queue->tail->next = newnode;
+    }
+    queue->tail = newnode;
+}
+
+struct connect_data* dequeue(linked_queue_t *queue){
+    if (queue->head == NULL){
+        return NULL;
+    } else{
+        struct connect_data *result = queue->head->connect_date;
+        node_t *temp = queue->head;
+        queue->head = queue->head->next;
+        if (queue->head == NULL) {
+            queue->tail = NULL;
+        }
+        free(temp);
+        return result;
+    }
+}
+
 
 unsigned char get_first_digit(unsigned int number){
     return number >> 4;
@@ -59,33 +112,23 @@ unsigned char get_five_digit(unsigned int number){
     number >>= 3;
     return number & 1;
 }
+
 unsigned char get_six_digit(unsigned int number){
     number >>= 2;
     return number & 1;
 }
 
 
-
-
-
-uint64_t swap_64(uint16_t array[8]){
-    uint64_t val = array[0];
-    for(int j = 1; j < 8; j++){
-        val = val | array[j] << (8*j);
-    }
-    return val;
-}
-
 unsigned char transform_header(message_t message){
     unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3) | (message.header.require_bit << 2);
     return header;
 }
 
-
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     while (1) {
 //        printf("1\n");
+         printf("here\n");
         message_t message = {0};
         unsigned char buffer = 0;
         long number = recv(data->socket_fd, &buffer, 1, 0);
@@ -109,19 +152,20 @@ void *connection_handler(void *argv){
         if (message.pay_load_length > 0)
             recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
         if(message.header.type_digit == 0x00){
+            printf("here echo\n");
             message.header.type_digit = 0x1;
             unsigned char header = transform_header(message);
             write(data->socket_fd, &header, sizeof(header));
             write(data->socket_fd, &v, 8);
             write(data->socket_fd, message.pay_load, message.pay_load_length);
         } else if(message.header.type_digit == 2){
-            
+            printf("2\n");
         } else if(message.header.type_digit == 4){
-        
+            printf("4\n");
         } else if(message.header.type_digit == 6){
-            
+            printf("6\n");
         } else if(message.header.type_digit == 8){
-            
+            printf("8\n");
         } else {
 //            printf("?\n");
             // Send it using exactly the same syscalls as for other file descriptors
@@ -145,6 +189,25 @@ void *connection_handler(void *argv){
 //    printf("www\n");
     return NULL;
 }
+
+void *thread_function(void *arg){
+    linked_queue_t *queue = (linked_queue_t *)arg;
+    struct connect_data *pclient = NULL;
+    while (1) {
+        pthread_mutex_lock(&queue->queue_lock);
+        if ((pclient = dequeue(queue))== NULL){
+            pthread_cond_wait(&queue->queue_con, &queue->queue_lock);
+            pclient = dequeue(queue);
+        }
+        pthread_mutex_unlock(&queue->queue_lock);
+        if (pclient != NULL){
+            connection_handler((void*)pclient);
+        }
+    }
+    return NULL;
+}
+
+
 b_file_t* read_binary(char *arg){
     char *file = arg;
     FILE *fp = fopen(file, "rb");
@@ -160,6 +223,17 @@ b_file_t* read_binary(char *arg){
 //    printf("");
     return content;
 }
+
+linked_queue_t* initialisze_queue(){
+    linked_queue_t *queue = malloc(sizeof(linked_queue_t));
+    pthread_mutex_init(&(queue->queue_lock), NULL);
+    pthread_cond_init(&queue->queue_con, NULL);
+    queue->shutdown_flag = 0;
+    queue->head = NULL;
+    queue->tail = NULL;
+    return queue;
+}
+
 
 int main(int argc, char** argv){
     b_file_t *file = NULL;
@@ -198,17 +272,28 @@ int main(int argc, char** argv){
         perror("listen wrong\n");
         exit(1);
     }
+    linked_queue_t *queue = initialisze_queue();
+    pthread_t *pthreads = calloc(SIZE, sizeof(pthread_t));
+    for (int i = 0; i < SIZE; i++) {
+        pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
+    }
     while (1) {
         uint32_t addrlen = sizeof(struct sockaddr_in);
         clientsocket_fd = accept(serversocket_fd, (struct sockaddr*)&address, &addrlen);
-        
         struct connect_data *d = malloc(sizeof(struct connect_data));
         d->socket_fd = clientsocket_fd;
         d->msg = SERVER_MSG;
         d->msg_len = strlen(SERVER_MSG) + 1;
-        pthread_t thread;
-        pthread_create(&thread, NULL, connection_handler, d);
+        d->queue = queue;
+        pthread_mutex_lock(&queue->queue_lock);
+        enqueue(queue, d);
+        pthread_cond_signal(&queue->queue_con);
+        pthread_mutex_unlock(&queue->queue_lock);
+//        pthread_t thread;
+//        pthread_create(&thread, NULL, connection_handler, d);
     }
+    free(file->message);
+    free(file);
 //    close(serversocket_fd);
     return 0;
 }
