@@ -126,65 +126,69 @@ unsigned char transform_header(message_t message){
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
-    while (1) {
-//        printf("1\n");
-         printf("here\n");
-        message_t message = {0};
-        unsigned char buffer = 0;
-        long number = recv(data->socket_fd, &buffer, 1, 0);
-        if (number == 0){
-            close(data->socket_fd);
-            break;
+    if (!data->queue->shutdown_flag){
+        while (1) {
+    //        printf("1\n");
+             printf("here\n");
+            message_t message = {0};
+            unsigned char buffer = 0;
+            long number = recv(data->socket_fd, &buffer, 1, 0);
+            if (number == 0){
+                close(data->socket_fd);
+                break;
+            }
+            number = recv(data->socket_fd, &(message.pay_load_length), sizeof(message.pay_load_length), 0);
+            if (number == 0){
+                close(data->socket_fd);
+                break;
+            }
+            message.header.type_digit = get_first_digit(buffer);
+            message.header.compression_bit = get_five_digit(buffer);
+            message.header.require_bit = get_six_digit(buffer);
+            uint64_t v = message.pay_load_length;
+            message.pay_load_length = be64toh(message.pay_load_length);
+            message.pay_load = malloc(message.pay_load_length);
+    //        printf("type_digit: %x\n",(int)message.header.type_digit);
+    //        printf("%x\n",message.pay_load_length);
+            if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
+            if(message.header.type_digit == 0x00){
+    //            printf("here echo\n");
+                message.header.type_digit = 0x1;
+                unsigned char header = transform_header(message);
+                write(data->socket_fd, &header, sizeof(header));
+                write(data->socket_fd, &v, 8);
+                write(data->socket_fd, message.pay_load, message.pay_load_length);
+            } else if(message.header.type_digit == 2){
+    //            printf("2\n");
+            } else if(message.header.type_digit == 4){
+    //            printf("4\n");
+            } else if(message.header.type_digit == 6){
+    //            printf("6\n");
+            } else if(message.header.type_digit == 8){
+                printf("8\n");
+                data->queue->shutdown_flag = 1;
+                break;
+            } else {
+    //            printf("?\n");
+                // Send it using exactly the same syscalls as for other file descriptors
+                message.header.type_digit = 0xf;
+                unsigned char header = transform_header(message);
+                uint64_t pay_length = 0;
+                write(data->socket_fd, &header, sizeof(header));
+                write(data->socket_fd, &pay_length, sizeof(pay_length));
+                close(data->socket_fd);
+                break;
+            }
+    //        write(data->socket_fd, message.pay_load, message.pay_load_length);
+            free(message.pay_load);
+        //    puts(buffer->header);
+    //        write(data->socket_fd, data->msg, data->msg_len);
+    //        printf("w\n");
+            
         }
-        number = recv(data->socket_fd, &(message.pay_load_length), sizeof(message.pay_load_length), 0);
-        if (number == 0){
-            close(data->socket_fd);
-            break;
-        }
-        message.header.type_digit = get_first_digit(buffer);
-        message.header.compression_bit = get_five_digit(buffer);
-        message.header.require_bit = get_six_digit(buffer);
-        uint64_t v = message.pay_load_length;
-        message.pay_load_length = be64toh(message.pay_load_length);
-        message.pay_load = malloc(message.pay_load_length);
-//        printf("type_digit: %x\n",(int)message.header.type_digit);
-//        printf("%x\n",message.pay_load_length);
-        if (message.pay_load_length > 0)
-            recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-        if(message.header.type_digit == 0x00){
-            printf("here echo\n");
-            message.header.type_digit = 0x1;
-            unsigned char header = transform_header(message);
-            write(data->socket_fd, &header, sizeof(header));
-            write(data->socket_fd, &v, 8);
-            write(data->socket_fd, message.pay_load, message.pay_load_length);
-        } else if(message.header.type_digit == 2){
-            printf("2\n");
-        } else if(message.header.type_digit == 4){
-            printf("4\n");
-        } else if(message.header.type_digit == 6){
-            printf("6\n");
-        } else if(message.header.type_digit == 8){
-            printf("8\n");
-        } else {
-//            printf("?\n");
-            // Send it using exactly the same syscalls as for other file descriptors
-            message.header.type_digit = 0xf;
-            unsigned char header = transform_header(message);
-            uint64_t pay_length = 0;
-            write(data->socket_fd, &header, sizeof(header));
-            write(data->socket_fd, &pay_length, sizeof(pay_length));
-            close(data->socket_fd);
-            break;
-        }
-//        write(data->socket_fd, message.pay_load, message.pay_load_length);
-        free(message.pay_load);
-    //    puts(buffer->header);
-//        write(data->socket_fd, data->msg, data->msg_len);
-//        printf("w\n");
-        
     }
-//    close(data->socket_fd);
+    close(data->socket_fd);
     free(data);
 //    printf("www\n");
     return NULL;
@@ -194,6 +198,8 @@ void *thread_function(void *arg){
     linked_queue_t *queue = (linked_queue_t *)arg;
     struct connect_data *pclient = NULL;
     while (1) {
+        if(queue->shutdown_flag)
+            break;
         pthread_mutex_lock(&queue->queue_lock);
         if ((pclient = dequeue(queue))== NULL){
             pthread_cond_wait(&queue->queue_con, &queue->queue_lock);
@@ -232,6 +238,14 @@ linked_queue_t* initialisze_queue(){
     queue->head = NULL;
     queue->tail = NULL;
     return queue;
+}
+
+void free_queue(linked_queue_t *queue){
+    while (queue->head != NULL) {
+        struct connect_data *data = dequeue(queue);
+        free(data->msg);
+        free(data);
+    }
 }
 
 
@@ -278,12 +292,14 @@ int main(int argc, char** argv){
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
     while (1) {
+        if (queue->shutdown_flag)
+            break;
         uint32_t addrlen = sizeof(struct sockaddr_in);
         clientsocket_fd = accept(serversocket_fd, (struct sockaddr*)&address, &addrlen);
         struct connect_data *d = malloc(sizeof(struct connect_data));
         d->socket_fd = clientsocket_fd;
-        d->msg = SERVER_MSG;
-        d->msg_len = strlen(SERVER_MSG) + 1;
+        d->msg = strdup(file->message);
+        d->msg_len = strlen(file->message);
         d->queue = queue;
         pthread_mutex_lock(&queue->queue_lock);
         enqueue(queue, d);
@@ -292,8 +308,15 @@ int main(int argc, char** argv){
 //        pthread_t thread;
 //        pthread_create(&thread, NULL, connection_handler, d);
     }
+    for (size_t i = 0; i < SIZE; i++) {
+        if (pthread_join(pthreads[i], NULL) != 0) {
+            perror("unable to join thread");
+            return 1;
+        }
+    }
+    free_queue(queue);
     free(file->message);
     free(file);
-//    close(serversocket_fd);
+    close(serversocket_fd);
     return 0;
 }
