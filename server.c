@@ -152,7 +152,7 @@ void *connection_handler(void *argv){
             if (message.pay_load_length > 0)
                 recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
             if(message.header.type_digit == 0x00){
-    //            printf("here echo\n");
+                printf("here echo\n");
                 message.header.type_digit = 0x1;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
