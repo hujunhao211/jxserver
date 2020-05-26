@@ -122,6 +122,11 @@ unsigned char transform_header(message_t message){
     unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3) | (message.header.require_bit << 2);
     return header;
 }
+unsigned char transform_header_echo(message_t message){
+    unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3);
+    return header;
+}
+
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
@@ -154,8 +159,7 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
-                message.header.compression_bit = 0;
-                unsigned char header = transform_header(message);
+                unsigned char header = transform_header_echo(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
