@@ -63,7 +63,7 @@ typedef struct message{
     char *pay_load;
 }message_t;
 
-typedef struct huffman_tree_node{
+typedef struct tree_node{
     uint8_t bytes;
     struct huffman_tree_node *left;
     struct huffman_tree_node *right;
@@ -71,9 +71,9 @@ typedef struct huffman_tree_node{
     
 }tree_node_t;
 
-typedef struct huffman_tree{
-    struct huffman_tree_node *root;
-}huffman_tree_t;
+typedef struct binary_tree{
+    struct tree_node *root;
+}binary_tree_t;
 
 void enqueue(linked_queue_t *queue, struct connect_data* data){
     node_t *newnode = malloc(sizeof(node_t));
@@ -122,18 +122,13 @@ unsigned char transform_header(message_t message){
     unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3) | (message.header.require_bit << 2);
     return header;
 }
-unsigned char transform_header_echo(message_t message){
-    unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3);
-    return header;
-}
-
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     if (!data->queue->shutdown_flag){
         while (1) {
     //        printf("1\n");
-//             printf("here\n");
+             printf("here\n");
             message_t message = {0};
             unsigned char buffer = 0;
             long number = recv(data->socket_fd, &buffer, 1, 0);
@@ -159,7 +154,8 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
-                unsigned char header = transform_header_echo(message);
+                message.header.require_bit = 0;
+                unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
@@ -197,6 +193,7 @@ void *connection_handler(void *argv){
 //    printf("www\n");
     return NULL;
 }
+
 void *thread_function(void *arg){
     linked_queue_t *queue = (linked_queue_t *)arg;
     struct connect_data *pclient = NULL;
