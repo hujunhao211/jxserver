@@ -128,7 +128,7 @@ void *connection_handler(void *argv){
     if (!data->queue->shutdown_flag){
         while (1) {
     //        printf("1\n");
-//             printf("here\n");
+             printf("here\n");
             message_t message = {0};
             unsigned char buffer = 0;
             long number = recv(data->socket_fd, &buffer, 1, 0);
@@ -152,24 +152,25 @@ void *connection_handler(void *argv){
             if (message.pay_load_length > 0)
                 recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
             if(message.header.type_digit == 0x00){
-                printf("here echo\n");
+    //            printf("here echo\n");
                 message.header.type_digit = 0x1;
+                message.header.compression_bit = 0;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
             } else if(message.header.type_digit == 2){
-                printf("2\n");
+    //            printf("2\n");
             } else if(message.header.type_digit == 4){
-                printf("4\n");
+    //            printf("4\n");
             } else if(message.header.type_digit == 6){
-                printf("6\n");
+    //            printf("6\n");
             } else if(message.header.type_digit == 8){
-                printf("8\n");
+    //            printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
             } else {
-//                printf("?\n");
+    //            printf("?\n");
                 // Send it using exactly the same syscalls as for other file descriptors
                 message.header.type_digit = 0xf;
                 unsigned char header = transform_header(message);
@@ -192,7 +193,6 @@ void *connection_handler(void *argv){
 //    printf("www\n");
     return NULL;
 }
-
 void *thread_function(void *arg){
     linked_queue_t *queue = (linked_queue_t *)arg;
     struct connect_data *pclient = NULL;
