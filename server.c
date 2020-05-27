@@ -267,7 +267,7 @@ void *connection_handler(void *argv){
                     for (int i = 0; i < message.pay_load_length; i++) {
                         int l = (int)message.pay_load[i];
                         printf("%d\n",l);
-                        if (l > 255){
+                        if (l > 254){
                             printf("wrong\n");
                         }
                         char digit_length  = data->queue->com_dict->len[l];
