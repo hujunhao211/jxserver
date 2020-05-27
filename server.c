@@ -270,7 +270,7 @@ void *connection_handler(void *argv){
                         char digit_length  = data->queue->com_dict->len[l];
                         compression_message = realloc(compression_message, compress_length + digit_length);
                         for (int j = 0; j < digit_length; j++){
-                            compression_message[compress_length++] = data->queue->com_dict->dic[i][j];
+                            compression_message[compress_length++] = data->queue->com_dict->dic[l][j];
                         }
                     }
                     free(message.pay_load);
