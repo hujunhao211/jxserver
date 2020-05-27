@@ -141,7 +141,7 @@ binary_tree_t *initialize_tree(){
 }
 
 tree_node_t *create_node(int externel){
-    tree_node_t *tree_node = malloc(sizeof(tree_node));
+    tree_node_t *tree_node = malloc(sizeof(tree_node_t));
     tree_node->is_external = externel;
     tree_node->left = NULL;
     tree_node->right = NULL;
