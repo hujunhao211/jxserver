@@ -262,7 +262,7 @@ void *connection_handler(void *argv){
                 if (message.header.require_bit == 1){
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
-                        int digit_length  = data->queue->com_dict->len[message.pay_load[i]];
+                        char digit_length  = data->queue->com_dict->len[message.pay_load[i]];
                         compression_message = realloc(compression_message, compress_length + digit_length);
                         for (int j = 0; j < digit_length; j++){
                             compression_message[compress_length++] = data->queue->com_dict->dic[i][j];
