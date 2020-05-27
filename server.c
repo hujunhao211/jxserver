@@ -171,7 +171,7 @@ compress_dict_t* build_compression(){
     binary_tree_t* tree = initialize_tree();
     FILE* file = fopen(SERVER_MSG, "rb");
 //    printf("%d\n",file == NULL);
-    compress->dic = {0};
+    compress->dic[255][255] = {0};
     fseek(file, 0, SEEK_END);
     unsigned long len_file = ftell(file);
     fseek(file, 0, SEEK_SET);
