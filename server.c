@@ -264,16 +264,9 @@ void *connection_handler(void *argv){
                 int compress_length = 0;
                 char *compression_message = malloc(sizeof(1));
                 if (message.header.require_bit == 1){
-                    for (int i = 0; i < message.pay_load_length; i++){
-                         printf("%d\n",(int)message.pay_load[i]);
-                    }
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
                         int l = (int)message.pay_load[i];
-                        printf("%d\n",l);
-                        if (l > 254){
-                            printf("wrong\n");
-                        }
                         char digit_length  = data->queue->com_dict->len[l];
                         compression_message = realloc(compression_message, compress_length + digit_length);
                         for (int j = 0; j < digit_length; j++){
