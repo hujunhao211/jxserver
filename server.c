@@ -306,6 +306,7 @@ void *connection_handler(void *argv){
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
+                printf("over here\n");
             } else if(message.header.type_digit == 2){
     //            printf("2\n");
             } else if(message.header.type_digit == 4){
