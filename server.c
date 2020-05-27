@@ -250,8 +250,9 @@ void *connection_handler(void *argv){
                 message.header.type_digit = 0x1;
                 if (message.header.require_bit == 1){
                     message.header.require_bit = 0;
+                    printf("here\n");
                 }
-                message.header.require_bit = 0;
+                
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
