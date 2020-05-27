@@ -281,6 +281,7 @@ void *connection_handler(void *argv){
                             compression_message[compress_length++] = data->queue->com_dict->dic[l][j];
                         }
                     }
+                    printf("compression length before: %d\n",compress_length);
                     if (message.pay_load_length % 8 != 0){
                         int padding = 8 - (message.pay_load_length % 8);
                         for (int i = 0; i < padding; i++){
