@@ -231,8 +231,8 @@ void free_tree(tree_node_t *root){
 }
 
 void set_bit(char *result,int index,char value){
-    int i = index/8;
-    int pos = index%8;
+    int i = index / 8;
+    int pos = index % 8;
     value = value << pos;
     result[i] = result[i] | value;
 }
@@ -281,7 +281,7 @@ void *connection_handler(void *argv){
                             compression_message[compress_length++] = data->queue->com_dict->dic[l][j];
                         }
                     }
-                    printf("compression length before: %d\n",compress_length);
+//                    printf("compression length before: %d\n",compress_length);
                     if ((compress_length % 8) != 0){
                         int padding = 8 - (compress_length % 8);
                         printf("padding %d\n",padding);
@@ -290,7 +290,7 @@ void *connection_handler(void *argv){
                             compression_message[compress_length++] = 0;
                         }
                     }
-                    printf("compression length : %d\n",compress_length);
+//                    printf("compression length : %d\n",compress_length);
                     char *result = malloc(compress_length / 8);
                     for (int i = 0; i < compress_length; i++){
                         set_bit(result,i, compression_message[i]);
