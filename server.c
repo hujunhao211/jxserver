@@ -283,8 +283,8 @@ void *connection_handler(void *argv){
                     }
                     printf("compression length before: %d\n",compress_length);
                     if ((compress_length % 8) != 0){
-                        printf("?\n");
                         int padding = 8 - (message.pay_load_length % 8);
+                        printf("padding %d\n",padding);
                         compression_message = realloc(compression_message,padding + compress_length);
                         for (int i = 0; i < padding; i++){
                             compression_message[compress_length++] = 0;
