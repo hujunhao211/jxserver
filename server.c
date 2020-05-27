@@ -16,10 +16,11 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <math.h>
 #include <byteswap.h>
 #include <endian.h>
 #define SIZE (20)
-#define SERVER_MSG ("Hello User ! Welcome to my server!\n")
+#define SERVER_MSG ("compression.dict")
 //#include <libkern/OSByteOrder.h>
 //#define bswap_16(x) OSSwapInt16(x)
 //#define bswap_32(x) OSSwapInt32(x)
@@ -64,16 +65,22 @@ typedef struct message{
 }message_t;
 
 typedef struct tree_node{
-    uint8_t bytes;
-    struct huffman_tree_node *left;
-    struct huffman_tree_node *right;
+    uint16_t content;
+    struct tree_node *left;
+    struct tree_node *right;
     int is_external;
-    
 }tree_node_t;
 
 typedef struct binary_tree{
     struct tree_node *root;
 }binary_tree_t;
+
+typedef struct compress_dic{
+    binary_tree_t *tree;
+    uint8_t dic[256][256];
+    uint8_t len[256];
+}compress_dict_t;
+
 
 void enqueue(linked_queue_t *queue, struct connect_data* data){
     node_t *newnode = malloc(sizeof(node_t));
@@ -121,6 +128,89 @@ unsigned char get_six_digit(unsigned int number){
 unsigned char transform_header(message_t message){
     unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3) | (message.header.require_bit << 2);
     return header;
+}
+
+binary_tree_t *initialize_tree(){
+    binary_tree_t *tree = malloc(sizeof(binary_tree_t));
+    tree_node_t *node = malloc(sizeof(tree_node_t));
+    node->is_external = 0;
+    node->left = NULL;
+    node->right = NULL;
+    return tree;
+}
+
+tree_node_t *create_node(int externel){
+    tree_node_t *tree_node = malloc(sizeof(tree_node));
+    tree_node->is_external = externel;
+    tree_node->left = NULL;
+    tree_node->right = NULL;
+}
+
+tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
+    tree_node_t *cur = NULL;
+    if (number){
+        if (root->right == NULL)
+            root->right = node;
+        cur = root->right;
+    } else{
+        if (root->left == NULL)
+            root->left = node;
+        cur = root->left;
+    }
+    return cur;
+}
+
+compress_dict_t* build_compression(){
+    unsigned char length = -1;
+    tree_node_t *node = NULL;
+    compress_dict_t *compress = malloc(sizeof(compress_dict_t));
+    binary_tree_t* tree = initialize_tree();
+    FILE* file = fopen(SERVER_MSG, "rb");
+    fseek(file, 0, SEEK_END);
+    unsigned long len_file = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    uint8_t *dict = malloc(len_file);
+    int size = 0;
+    for (int i = 0; i < len_file/8; i++) {
+        fread(&length, sizeof(length), 1, file);
+        for (int j = 0; j < 8; j++) {
+            dict[size++] = (length >> (8 - j - 1)) & 1;
+        }
+    }
+    int switch_read = 1;
+    int x = 0;
+    int y = 0;
+    int i;
+    for (i = 0; i < len_file; i++) {
+        if (x == 255){
+            break;
+        }
+        if (switch_read){
+            length = 0;
+            for (int j = 0; j < 8; j++) {
+                length += pow(2, 8 - j - 1) * dict[i++];
+            }
+            compress->len[x] = length;
+            switch_read = 0;
+        } else{
+            tree_node_t *root = tree->root;
+            y = 0;
+            for (int j = 0; j < length; j++) {
+                compress->dic[x][y++] = dict[i++];
+                if (j == length - 1){
+                    node = create_node(1);
+                    node->content = x;
+                } else{
+                    node = create_node(0);
+                }
+                insert_node(tree->root, node, dict[i++]);
+            }
+            x++;
+            switch_read = 1;
+        }
+    }
+    compress->tree = tree;
+    return compress;
 }
 
 void *connection_handler(void *argv){
@@ -319,3 +409,5 @@ int main(int argc, char** argv){
     close(serversocket_fd);
     return 0;
 }
+
+
