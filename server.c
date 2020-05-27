@@ -204,6 +204,7 @@ compress_dict_t* build_compression(){
             tree_node_t *root = tree->root;
             y = 0;
             for (int j = 0; j < length; j++) {
+                printf("x: %d y: %d dic: %d\n",x,y,i);
                 compress->dic[x][y++] = dict[i++];
                 if (j == length - 1){
                     node = create_node(1);
