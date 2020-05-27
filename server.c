@@ -283,12 +283,14 @@ void *connection_handler(void *argv){
                     }
 //                    printf("compression length before: %d\n",compress_length);
                     if ((compress_length % 8) != 0){
-                        int padding = 8 - (compress_length % 8);
+                        int padding = 8 - (compress_length % 8) - 1;
                         printf("padding %d\n",padding);
                         compression_message = realloc(compression_message,padding + compress_length);
                         for (int i = 0; i < padding; i++){
                             compression_message[compress_length++] = 0;
                         }
+                        compression_message = realloc(compression_message,++compress_length);
+                        compression_message[compress_length - 1] = padding;
                     }
 //                    printf("compression length : %d\n",compress_length);
                     char *result = malloc(compress_length / 8);
