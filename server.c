@@ -259,10 +259,10 @@ void *connection_handler(void *argv){
                 message.header.type_digit = 0x1;
                 int compress_length = 0;
                 char *compression_message = malloc(sizeof(1));
-                for (int i = 0; i < message.pay_load_length; i++){
-                     printf("%d\n",(int)message.pay_load[i]);
-                }
                 if (message.header.require_bit == 1){
+                    for (int i = 0; i < message.pay_load_length; i++){
+                         printf("%d\n",(int)message.pay_load[i]);
+                    }
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
                         char digit_length  = data->queue->com_dict->len[(int)message.pay_load[i]];
