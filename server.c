@@ -131,22 +131,23 @@ unsigned char transform_header(message_t message){
     return header;
 }
 
-binary_tree_t *initialize_tree(){
-    binary_tree_t *tree = malloc(sizeof(binary_tree_t));
-    tree_node_t *node = malloc(sizeof(tree_node_t));
-    node->is_external = 0;
-    node->left = NULL;
-    node->right = NULL;
-    return tree;
-}
-
 tree_node_t *create_node(int externel){
-    tree_node_t *tree_node = malloc(sizeof(tree_node));
+    tree_node_t *tree_node = malloc(sizeof(tree_node_t));
     tree_node->is_external = externel;
     tree_node->left = NULL;
     tree_node->right = NULL;
     return tree_node;
 }
+
+
+binary_tree_t *initialize_tree(){
+    binary_tree_t *tree = malloc(sizeof(binary_tree_t));
+    tree_node_t *node = create_node(0);
+    tree->root = node;
+    return tree;
+}
+
+
 
 tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
     tree_node_t *cur = NULL;
@@ -169,6 +170,7 @@ compress_dict_t* build_compression(){
     binary_tree_t* tree = initialize_tree();
     FILE* file = fopen(SERVER_MSG, "rb");
 //    printf("%d\n",file == NULL);
+    compress->dic[255][255] = 0;
     fseek(file, 0, SEEK_END);
     unsigned long len_file = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -201,14 +203,15 @@ compress_dict_t* build_compression(){
             tree_node_t *root = tree->root;
             y = 0;
             for (int j = 0; j < length; j++) {
-                compress->dic[x][y] = dict[i++];
+//                printf("x: %d y: %d dic: %d\n",x,y,i);
+                compress->dic[x][y++] = dict[i++];
                 if (j == length - 1){
                     node = create_node(1);
                     node->content = x;
                 } else{
                     node = create_node(0);
                 }
-                root = insert_node(root, node, dict[i++]);
+                root = insert_node(root, node, dict[i - 1]);
             }
             x++;
             switch_read = 1;
@@ -227,11 +230,11 @@ void free_tree(tree_node_t *root){
     free(root);
 }
 
-void set_bit(char *result,int index,int value){
+void set_bit(char *result,int index,char value){
     int i = index/8;
     int pos = index%8;
-    char flag = flag << pos;
-    result[i] = result[i] | flag;
+    value = value << pos;
+    result[i] = result[i] | value;
 }
 
 void *connection_handler(void *argv){
@@ -268,12 +271,14 @@ void *connection_handler(void *argv){
                 int compress_length = 0;
                 char *compression_message = malloc(sizeof(1));
                 if (message.header.require_bit == 1){
+//                    printf("here in\n");
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
-                        char digit_length  = data->queue->com_dict->len[(int)message.pay_load[i]];
+                        int l = (int)message.pay_load[i];
+                        char digit_length  = data->queue->com_dict->len[l];
                         compression_message = realloc(compression_message, compress_length + digit_length);
                         for (int j = 0; j < digit_length; j++){
-                            compression_message[compress_length++] = data->queue->com_dict->dic[i][j];
+                            compression_message[compress_length++] = data->queue->com_dict->dic[l][j];
                         }
                     }
                     if (message.pay_load_length % 8 != 0){
@@ -432,7 +437,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < SIZE; i++) {
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
-//    queue->com_dict = build_compression();
+    queue->com_dict = build_compression();
     while (1) {
         if (queue->shutdown_flag)
             break;
@@ -459,5 +464,4 @@ int main(int argc, char** argv){
     close(serversocket_fd);
     return 0;
 }
-
 
