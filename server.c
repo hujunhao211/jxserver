@@ -212,7 +212,7 @@ compress_dict_t* build_compression(){
                 } else{
                     node = create_node(0);
                 }
-                root = insert_node(root, node, dict[i++]);
+                root = insert_node(root, node, dict[i - 1]);
             }
             x++;
             switch_read = 1;
