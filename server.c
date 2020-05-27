@@ -131,15 +131,6 @@ unsigned char transform_header(message_t message){
     return header;
 }
 
-binary_tree_t *initialize_tree(){
-    binary_tree_t *tree = malloc(sizeof(binary_tree_t));
-    tree_node_t *node = malloc(sizeof(tree_node_t));
-    node->is_external = 0;
-    node->left = NULL;
-    node->right = NULL;
-    return tree;
-}
-
 tree_node_t *create_node(int externel){
     tree_node_t *tree_node = malloc(sizeof(tree_node_t));
     tree_node->is_external = externel;
@@ -147,6 +138,17 @@ tree_node_t *create_node(int externel){
     tree_node->right = NULL;
     return tree_node;
 }
+
+
+binary_tree_t *initialize_tree(){
+    binary_tree_t *tree = malloc(sizeof(binary_tree_t));
+    tree_node_t *node = create_node(0);
+    tree->root = node;
+    
+    return tree;
+}
+
+
 
 tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
     tree_node_t *cur = NULL;
