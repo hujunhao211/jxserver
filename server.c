@@ -287,6 +287,7 @@ void *connection_handler(void *argv){
                             compression_message[compress_length++] = 0;
                         }
                     }
+                    printf("compression length : %d\n",compress_length);
                     char *result = malloc(compress_length / 8);
                     for (int i = 0; i < compress_length; i++){
                         set_bit(result,i, compression_message[i]);
