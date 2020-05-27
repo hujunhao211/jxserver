@@ -215,7 +215,16 @@ compress_dict_t* build_compression(){
         }
     }
     compress->tree = tree;
+    free(dict);
     return compress;
+}
+
+void free_tree(tree_node_t *root){
+    if (root == NULL)
+        return;
+    free_tree(root->left);
+    free_tree(root->right);
+    free(root);
 }
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
@@ -248,11 +257,21 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
+                int compress_length = 0;
+                char *compression_message = malloc(sizeof(1));
                 if (message.header.require_bit == 1){
                     message.header.require_bit = 0;
-                    printf("here\n");
+                    for (int i = 0; i < message.pay_load_length; i++) {
+                        int digit_length  = data->queue->com_dict->len[message.pay_load[i]];
+                        compression_message = realloc(compression_message, compress_length + digit_length);
+                        for (int j = 0; j < digit_length; j++){
+                            compression_message[compress_length++] = data->queue->com_dict->dic[i][j];
+                        }
+                    }
+                    free(message.pay_load);
+                    message.pay_load = compression_message;
+                    message.pay_load_length = compress_length;
                 }
-                
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
@@ -344,6 +363,9 @@ void free_queue(linked_queue_t *queue){
         free(data);
     }
     free(queue->msg);
+    free_tree(queue->com_dict->tree->root);
+    free(queue->com_dict->tree);
+    free(queue->com_dict);
     free(queue);
 }
 
