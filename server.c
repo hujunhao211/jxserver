@@ -289,7 +289,7 @@ void *connection_handler(void *argv){
                     }
                     char *result = malloc(compress_length / 8);
                     for (int i = 0; i < compress_length; i++){
-                        set_bit(result, compress_length - 1, compression_message[compress_length]);
+                        set_bit(result,i, compression_message[i]);
                     }
                     free(message.pay_load);
                     message.pay_load = result;
