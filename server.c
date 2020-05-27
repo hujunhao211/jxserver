@@ -265,7 +265,12 @@ void *connection_handler(void *argv){
                     }
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
-                        char digit_length  = data->queue->com_dict->len[(int)message.pay_load[i]];
+                        int l = (int)message.pay_load[i];
+                        printf("%d\n",l);
+                        if (l > 255){
+                            printf("wrong\n");
+                        }
+                        char digit_length  = data->queue->com_dict->len[l];
                         compression_message = realloc(compression_message, compress_length + digit_length);
                         for (int j = 0; j < digit_length; j++){
                             compression_message[compress_length++] = data->queue->com_dict->dic[i][j];
