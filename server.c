@@ -421,7 +421,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < SIZE; i++) {
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
-//    queue->com_dict = build_compression();
+    queue->com_dict = build_compression();
     while (1) {
         if (queue->shutdown_flag)
             break;
