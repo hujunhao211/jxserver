@@ -38,6 +38,7 @@ typedef struct linked_queue{
     pthread_cond_t queue_con;
     int shutdown_flag;
     char *msg;
+    struct compress_dic *com_dict;
 }linked_queue_t;
 
 typedef struct b_file{
@@ -144,6 +145,7 @@ tree_node_t *create_node(int externel){
     tree_node->is_external = externel;
     tree_node->left = NULL;
     tree_node->right = NULL;
+    return tree_node;
 }
 
 tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
@@ -161,28 +163,31 @@ tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
 }
 
 compress_dict_t* build_compression(){
-    unsigned char length = -1;
+    uint8_t length = 0;
     tree_node_t *node = NULL;
     compress_dict_t *compress = malloc(sizeof(compress_dict_t));
     binary_tree_t* tree = initialize_tree();
     FILE* file = fopen(SERVER_MSG, "rb");
+//    printf("%d\n",file == NULL);
     fseek(file, 0, SEEK_END);
     unsigned long len_file = ftell(file);
     fseek(file, 0, SEEK_SET);
-    uint8_t *dict = malloc(len_file);
+//    printf("len :%lu\n",len_file);
+    uint8_t *dict = malloc(len_file * 8);
     int size = 0;
-    for (int i = 0; i < len_file/8; i++) {
+    for (int i = 0; i < len_file;i++) {
         fread(&length, sizeof(length), 1, file);
         for (int j = 0; j < 8; j++) {
             dict[size++] = (length >> (8 - j - 1)) & 1;
         }
     }
+//    printf("size : %d\n",size);
     int switch_read = 1;
     int x = 0;
     int y = 0;
     int i;
-    for (i = 0; i < len_file; i++) {
-        if (x == 255){
+    for (i = 0; i < len_file * 8;) {
+        if (x == 256){
             break;
         }
         if (switch_read){
@@ -196,14 +201,14 @@ compress_dict_t* build_compression(){
             tree_node_t *root = tree->root;
             y = 0;
             for (int j = 0; j < length; j++) {
-                compress->dic[x][y++] = dict[i++];
+                compress->dic[x][y] = dict[i++];
                 if (j == length - 1){
                     node = create_node(1);
                     node->content = x;
                 } else{
                     node = create_node(0);
                 }
-                insert_node(tree->root, node, dict[i++]);
+                root = insert_node(root, node, dict[i++]);
             }
             x++;
             switch_read = 1;
@@ -212,7 +217,6 @@ compress_dict_t* build_compression(){
     compress->tree = tree;
     return compress;
 }
-
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     if (!data->queue->shutdown_flag){
@@ -244,6 +248,9 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
+                if (message.header.require_bit == 1){
+                    message.header.require_bit = 0;
+                }
                 message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
@@ -383,6 +390,7 @@ int main(int argc, char** argv){
     for (int i = 0; i < SIZE; i++) {
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
+//    queue->com_dict = build_compression();
     while (1) {
         if (queue->shutdown_flag)
             break;
