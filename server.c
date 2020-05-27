@@ -264,6 +264,7 @@ void *connection_handler(void *argv){
                 int compress_length = 0;
                 char *compression_message = malloc(sizeof(1));
                 if (message.header.require_bit == 1){
+                    printf("here in\n");
                     message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
                         int l = (int)message.pay_load[i];
