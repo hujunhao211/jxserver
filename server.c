@@ -184,7 +184,7 @@ compress_dict_t* build_compression(){
             dict[size++] = (length >> (8 - j - 1)) & 1;
         }
     }
-    printf("size : %d\n",size);
+//    printf("size : %d\n",size);
     int switch_read = 1;
     int x = 0;
     int y = 0;
