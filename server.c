@@ -350,14 +350,23 @@ void *connection_handler(void *argv){
                         printf("pay_load : %d\n",message.pay_load[i]);
                     }
                     message.header.compression_bit = 1;
-                    v = compress_length;
-                    v = htons(v);
-                }
+                    unsigned char hexBuffer[100] = {0};
+                    memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
+                    unsigned char header = transform_header(message);
+                    write(data->socket_fd, &header, sizeof(header));
+                    for (int i = 7; i >= 0; i--) {
+                        send(data->socket_fd,&(hexBuffer[i]),1,0);
+                    }
+                    write(data->socket_fd, message.pay_load, message.pay_load_length);
+
+//                    v = htons(v);
+                } else{
                 message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
+                }
             } else if(message.header.type_digit == 2){
     //            printf("2\n");
             } else if(message.header.type_digit == 4){
