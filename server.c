@@ -213,7 +213,7 @@ compress_dict_t* build_compression(){
     // while (i < info.st_size*8){
     while (i < len_file * 8){
         uint8_t temp_len = 0;
-        for (int j = 0; j < 8; j++){
+        for (int j = 0; j < 8 && i < len_file*8; j++){
             if (get_bit(dict_buffer, i++) == 1){
                 set_bit(&temp_len, j);
             }
