@@ -312,7 +312,7 @@ void *connection_handler(void *argv){
             if (message.pay_load_length > 0)
                 recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
             if(message.header.type_digit == 0x00){
-                printf("here echo\n");
+//                printf("here echo\n");
                 message.header.type_digit = 0x1;
                 int number_bit = 0;
                 int compress_length = 1;
@@ -381,28 +381,28 @@ void *connection_handler(void *argv){
 //                printf("msg:    is     %s\n",data->queue->msg);
                 if (message.header.compression_bit == 0){
                     if ((dir = opendir(data->queue->msg)) != NULL){
-                        while ((ent = readdir(dir)) != NULL) {
-                            if (ent->d_type == 8) {
-                                for (int k = 0; k < strlen(ent->d_name); k++) {
-                                    respone[pay_load_length + k] = ent->d_name[k];
-                                }
-                                pay_load_length += (strlen(ent->d_name) + 1);
-                                respone[pay_load_length - 1] = 0x00;
-                            }
-                        }
-                        closedir(dir);
-                        respone[pay_load_length - 1] = 0x00;
-                        respone = realloc(respone, pay_load_length);
                         if (message.header.require_bit == 0){
-                            uint8_t response_header = 0x30;
-                            send(data->socket_fd, &response_header, 1, 0);
-                            unsigned char hexBuffer[100]={0};
-                            memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
-                            for(int i=7;i>=0;i--){
-                                send(data->socket_fd, &(hexBuffer[i]),1,0);
+                            while ((ent = readdir(dir)) != NULL) {
+                                if (ent->d_type == 8) {
+                                    for (int k = 0; k < strlen(ent->d_name); k++) {
+                                        respone[pay_load_length + k] = ent->d_name[k];
+                                    }
+                                    pay_load_length += (strlen(ent->d_name) + 1);
+                                    respone[pay_load_length - 1] = 0x00;
+                                }
                             }
-                            // send back file name
-                            send(data->socket_fd, (void*)(respone), pay_load_length, 0);
+                            closedir(dir);
+                            respone[pay_load_length - 1] = 0x00;
+                            respone = realloc(respone, pay_load_length);
+                                uint8_t response_header = 0x30;
+                                send(data->socket_fd, &response_header, 1, 0);
+                                unsigned char hexBuffer[100]={0};
+                                memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
+                                for(int i = 7;i >= 0;i--){
+                                    send(data->socket_fd, &(hexBuffer[i]),1,0);
+                                }
+                                // send back file name
+                                send(data->socket_fd, (void*)(respone), pay_load_length, 0);
                         } else{
                             
                         }
