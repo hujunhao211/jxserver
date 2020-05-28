@@ -342,6 +342,7 @@ void *connection_handler(void *argv){
                     compression_message = realloc(compression_message, ++compress_length);
                     compression_message[compress_length - 1] = gap;
                     free(message.pay_load);
+                    printf("comprerss_length: %d\n",compress_length);
                     message.pay_load_length = compress_length;
                     message.pay_load = compression_message;
                     message.header.compression_bit = 1;
