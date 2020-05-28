@@ -350,6 +350,7 @@ void *connection_handler(void *argv){
                         printf("pay_load : %d\n",message.pay_load[i]);
                     }
                     message.header.compression_bit = 1;
+                    message.header.require_bit = 0;
                     unsigned char hexBuffer[100] = {0};
                     memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
                     unsigned char header = transform_header(message);
