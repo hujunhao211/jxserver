@@ -379,7 +379,7 @@ void *connection_handler(void *argv){
                 struct dirent* ent;
                 int pay_load_length = 0;
                 char *respone = calloc(100, sizeof(char));
-                if (message.header.require_bit == 0){
+                if (message.header.compression_bit == 0){
                     if ((dir = opendir(data->queue->msg)) != NULL){
                         while ((ent = readdir(dir)) != NULL) {
                             if (ent->d_type == 8) {
@@ -409,7 +409,6 @@ void *connection_handler(void *argv){
                     }
                 }
                 free(respone);
-                free(message.pay_load);
             } else if(message.header.type_digit == 4){
                 printf("4\n");
             } else if(message.header.type_digit == 6){
