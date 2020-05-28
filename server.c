@@ -379,6 +379,7 @@ void *connection_handler(void *argv){
                 struct dirent* ent;
                 int pay_load_length = 0;
                 char *respone = calloc(100, sizeof(char));
+                printf("msg:    is     %s\n",data->queue->msg);
                 if (message.header.compression_bit == 0){
                     if ((dir = opendir(data->queue->msg)) != NULL){
                         while ((ent = readdir(dir)) != NULL) {
