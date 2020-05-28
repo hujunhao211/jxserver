@@ -402,7 +402,7 @@ void *connection_handler(void *argv){
                                 send(data->socket_fd, &(hexBuffer[i]),1,0);
                             }
                             // send back file name
-                            send(data->socket_fd, (void*)(respone), message.pay_load_length, 0);
+                            send(data->socket_fd, (void*)(respone), pay_load_length, 0);
                         } else{
                             
                         }
