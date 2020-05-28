@@ -340,23 +340,23 @@ void *connection_handler(void *argv){
                                 }
                             }
                         }
-                        printf("%d\n",number_bit);
-                        printf("%d\n",compress_length);
+//                        printf("%d\n",number_bit);
+//                        printf("%d\n",compress_length);
                         char gap = abs(number_bit - compress_length * 8);
                         for (int i = number_bit; i  < compress_length * 8; i++) {
                             clear_bit(compression_message, i);
                         }
-                        printf("%d\n",gap);
+//                        printf("%d\n",gap);
                         compression_message = realloc(compression_message, ++compress_length);
                         compression_message[compress_length - 1] = gap;
                         free(message.pay_load);
-                        printf("comprerss_length: %d\n",compress_length);
+//                        printf("comprerss_length: %d\n",compress_length);
                         message.pay_load_length = compress_length;
-                        printf("comprerss_length: %lu\n",message.pay_load_length);
+//                        printf("comprerss_length: %lu\n",message.pay_load_length);
                         message.pay_load = compression_message;
-                        for (int i = 0; i < message.pay_load_length; i++) {
-                            printf("pay_load : %d\n",message.pay_load[i]);
-                        }
+//                        for (int i = 0; i < message.pay_load_length; i++) {
+//                            printf("pay_load : %d\n",message.pay_load[i]);
+//                        }
                         message.header.require_bit = 0;
                         unsigned char hexBuffer[100] = {0};
                         memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
