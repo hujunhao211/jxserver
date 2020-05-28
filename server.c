@@ -317,49 +317,56 @@ void *connection_handler(void *argv){
                 int compress_length = 1;
                 unsigned char *compression_message = malloc(1);
                 if (message.header.require_bit == 1){
+                    message.header.compression_bit = 1;
 //                    printf("here in\n");
-                    for (int i = 0; i < message.pay_load_length; i++) {
-                        int c = message.pay_load[i];
-                        int index = data->queue->com_dict->len[c];
-                        for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
-                            if (number_bit == compress_length * 8){
-                                compression_message = realloc(compression_message, ++compress_length);
-                            }
-                            if (get_bit(data->queue->com_dict->dict, j) == 1){
-                                set_bit(compression_message, number_bit++);
-                            } else{
-                                clear_bit(compression_message, number_bit++);
+                    if (message.header.compression_bit == 1){
+                        message.header.require_bit = 0;
+                        unsigned char header = transform_header(message);
+                        write(data->socket_fd, &header, sizeof(header));
+                        write(data->socket_fd, &v, 8);
+                        write(data->socket_fd, message.pay_load, message.pay_load_length);
+                    } else{
+                        for (int i = 0; i < message.pay_load_length; i++) {
+                            int c = message.pay_load[i];
+                            int index = data->queue->com_dict->len[c];
+                            for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
+                                if (number_bit == compress_length * 8){
+                                    compression_message = realloc(compression_message, ++compress_length);
+                                }
+                                if (get_bit(data->queue->com_dict->dict, j) == 1){
+                                    set_bit(compression_message, number_bit++);
+                                } else{
+                                    clear_bit(compression_message, number_bit++);
+                                }
                             }
                         }
+                        printf("%d\n",number_bit);
+                        printf("%d\n",compress_length);
+                        char gap = abs(number_bit - compress_length * 8);
+                        for (int i = number_bit; i  < compress_length * 8; i++) {
+                            clear_bit(compression_message, i);
+                        }
+                        printf("%d\n",gap);
+                        compression_message = realloc(compression_message, ++compress_length);
+                        compression_message[compress_length - 1] = gap;
+                        free(message.pay_load);
+                        printf("comprerss_length: %d\n",compress_length);
+                        message.pay_load_length = compress_length;
+                        printf("comprerss_length: %lu\n",message.pay_load_length);
+                        message.pay_load = compression_message;
+                        for (int i = 0; i < message.pay_load_length; i++) {
+                            printf("pay_load : %d\n",message.pay_load[i]);
+                        }
+                        message.header.require_bit = 0;
+                        unsigned char hexBuffer[100] = {0};
+                        memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
+                        unsigned char header = transform_header(message);
+                        write(data->socket_fd, &header, sizeof(header));
+                        for (int i = 7; i >= 0; i--) {
+                            send(data->socket_fd,&(hexBuffer[i]),1,0);
+                        }
+                        write(data->socket_fd, message.pay_load, message.pay_load_length);
                     }
-                    printf("%d\n",number_bit);
-                    printf("%d\n",compress_length);
-                    char gap = abs(number_bit - compress_length * 8);
-                    for (int i = number_bit; i  < compress_length * 8; i++) {
-                        clear_bit(compression_message, i);
-                    }
-                    printf("%d\n",gap);
-                    compression_message = realloc(compression_message, ++compress_length);
-                    compression_message[compress_length - 1] = gap;
-                    free(message.pay_load);
-                    printf("comprerss_length: %d\n",compress_length);
-                    message.pay_load_length = compress_length;
-                    printf("comprerss_length: %lu\n",message.pay_load_length);
-                    message.pay_load = compression_message;
-                    for (int i = 0; i < message.pay_load_length; i++) {
-                        printf("pay_load : %d\n",message.pay_load[i]);
-                    }
-                    message.header.compression_bit = 1;
-                    message.header.require_bit = 0;
-                    unsigned char hexBuffer[100] = {0};
-                    memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
-                    unsigned char header = transform_header(message);
-                    write(data->socket_fd, &header, sizeof(header));
-                    for (int i = 7; i >= 0; i--) {
-                        send(data->socket_fd,&(hexBuffer[i]),1,0);
-                    }
-                    write(data->socket_fd, message.pay_load, message.pay_load_length);
-
 //                    v = htons(v);
                 } else{
                 message.header.require_bit = 0;
