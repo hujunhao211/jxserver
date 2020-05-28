@@ -313,9 +313,9 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
-                int number_bit = 0;
-                int compress_length = 1;
-                unsigned char *compression_message = malloc(1);
+//                int number_bit = 0;
+//                int compress_length = 1;
+//                unsigned char *compression_message = malloc(1);
                 if (message.header.require_bit == 1){
 //                    printf("here in\n");
 //                    for (int i = 0; i < message.pay_load_length; i++) {
