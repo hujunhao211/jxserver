@@ -477,6 +477,7 @@ void *connection_handler(void *argv){
                         write(data->socket_fd, &header, sizeof(header));
                         uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
                         write(data->socket_fd, &pay_load_len, 8);
+                        printf("directory name: %s\n",data->queue->msg);
                         char *file_name = malloc(strlen(data->queue->msg)) + 3 + strlen(file);
                         strcpy(file_name, data->queue->msg);
                         strcat(file_name, "/");
