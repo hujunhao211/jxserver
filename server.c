@@ -96,6 +96,13 @@ void enqueue(linked_queue_t *queue, struct connect_data* data){
     queue->tail = newnode;
 }
 
+uint64_t swap_uint64(uint64_t val) {
+    val = ((val << 8u) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8u) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16u) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16u) & 0x0000FFFF0000FFFFULL );
+    return (val << 32u) | (val >> 32u);
+}
+
+
 struct connect_data* dequeue(linked_queue_t *queue){
     if (queue->head == NULL){
         return NULL;
@@ -507,6 +514,7 @@ void *connection_handler(void *argv){
                         int number_bit = 0;
                         int compress_length = 1;
                         unsigned char *compression_message = malloc(1);
+                        file_size = swap_uint64(file_size);
                         unsigned char* pay_load = (unsigned char*)&file_size;
                         for (int i  = 0; i  < 8; i++) {
                             int c = pay_load[i];
@@ -535,9 +543,8 @@ void *connection_handler(void *argv){
                         for (int i = 7; i >= 0; i--) {
                             send(data->socket_fd,&(hexBuffer[i]),1,0);
                         }
-                        for (int i = compress_length; i >= 0; i--) {
-                            write(data->socket_fd, &(message.pay_load[i]), 1);
-                        }
+                        write(data->socket_fd, message.pay_load, 1);
+
                     }
                 }
             } else if(message.header.type_digit == 6){
