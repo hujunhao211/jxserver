@@ -5,7 +5,6 @@
 //  Created by junhao hu on 2020/5/20.
 //  Copyright © 2020 junhao hu. All rights reserved.
 //
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -62,7 +61,7 @@ typedef struct package{
 typedef struct message{
     struct package header;
     uint64_t pay_load_length;
-    unsigned char *pay_load;
+    char *pay_load;
 }message_t;
 
 typedef struct tree_node{
@@ -189,17 +188,6 @@ uint8_t get_bit(uint8_t* array, int index){
     }
     // return 1 & (array[index / 8] << (index % 8));
 }
-void clear_bit (uint8_t *array, int index) {
-    int i = index/8;
-    int pos = index%8;
-
-    unsigned int flag = 1;
-
-    flag = flag << (8-pos-1);
-    flag = ~flag;
-
-    array[i] = array[i] & flag;
-}
 
 compress_dict_t* build_compression(){
     tree_node_t *node = NULL;
@@ -215,8 +203,8 @@ compress_dict_t* build_compression(){
     uint8_t *dict_buffer = malloc(len_file);
     fread(dict_buffer, 1, len_file, file);
     fclose(file);
-    uint8_t *dict = malloc(2048);
-    dict = memset(dict, 0, sizeof(uint8_t) * 2048);
+    uint8_t *dict = malloc(1024);
+    dict = memset(dict, 0, sizeof(uint8_t) * 1024);
     int *len = malloc(sizeof(int) * 257);
     int size = 0;
     int i = 0;
@@ -255,9 +243,15 @@ compress_dict_t* build_compression(){
     compress->tree = tree;
     compress->dict = dict;
     compress->len = len;
+    for (i = 0; i < 256; i++){
+        for (int j = compress->len[i]; j < compress->len[i+1]; j++){
+            printf("%d", get_bit(compress->dict, j));
+        }
+        printf("\n");
+    }
+    printf("here\n");
     return compress;
 }
-
 void free_tree(tree_node_t *root){
     if (root == NULL)
         return;
