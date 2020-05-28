@@ -215,8 +215,8 @@ compress_dict_t* build_compression(){
     uint8_t *dict_buffer = malloc(len_file);
     fread(dict_buffer, 1, len_file, file);
     fclose(file);
-    uint8_t *dict = malloc(1024);
-    dict = memset(dict, 0, sizeof(uint8_t) * 1024);
+    uint8_t *dict = malloc(2048);
+    dict = memset(dict, 0, sizeof(uint8_t) * 2048);
     int *len = malloc(sizeof(int) * 257);
     int size = 0;
     int i = 0;
