@@ -5,7 +5,6 @@
 //  Created by junhao hu on 2020/5/20.
 //  Copyright © 2020 junhao hu. All rights reserved.
 //
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -62,7 +61,7 @@ typedef struct package{
 typedef struct message{
     struct package header;
     uint64_t pay_load_length;
-    char *pay_load;
+    unsigned char *pay_load;
 }message_t;
 
 typedef struct tree_node{
@@ -78,8 +77,8 @@ typedef struct binary_tree{
 
 typedef struct compress_dic{
     binary_tree_t *tree;
-    uint8_t dic[256][256];
-    uint8_t len[256];
+    uint8_t *dict;
+    int *len;
 }compress_dict_t;
 
 
@@ -163,65 +162,111 @@ tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
     return cur;
 }
 
+
+void set_bit(uint8_t* array, int index){
+    int i = index/8;
+    int pos = index%8;
+
+    uint8_t flag = 1;
+
+    flag = flag << (8-pos-1);
+    array[i] = array[i] | flag;
+}
+
+uint8_t get_bit(uint8_t* array, int index){
+    int i = index/8;
+    int pos = index%8;
+
+    uint8_t flag = 1;
+
+    flag = flag << (8-pos-1);
+
+    if ((array[i] & flag) != 0) {
+        return 0x1;
+    } else {
+        return 0x0;
+    }
+    // return 1 & (array[index / 8] << (index % 8));
+}
+
+void clear_bit (uint8_t *array, int index) {
+    int i = index/8;
+    int pos = index%8;
+
+    unsigned int flag = 1;
+
+    flag = flag << (8-pos-1);
+    flag = ~flag;
+
+    array[i] = array[i] & flag;
+}
+
 compress_dict_t* build_compression(){
-    uint8_t length = 0;
     tree_node_t *node = NULL;
     compress_dict_t *compress = malloc(sizeof(compress_dict_t));
     binary_tree_t* tree = initialize_tree();
     FILE* file = fopen(SERVER_MSG, "rb");
 //    printf("%d\n",file == NULL);
-    compress->dic[255][255] = 0;
     fseek(file, 0, SEEK_END);
     unsigned long len_file = ftell(file);
     fseek(file, 0, SEEK_SET);
+    
 //    printf("len :%lu\n",len_file);
-    uint8_t *dict = malloc(len_file * 8);
+    uint8_t *dict_buffer = malloc(len_file);
+    fread(dict_buffer, 1, len_file, file);
+    fclose(file);
+    uint8_t *dict = malloc(sizeof(uint8_t) * 1024);
+    dict = memset(dict, 0, sizeof(uint8_t) * 1024);
+    int *len = malloc(sizeof(int) * 257);
     int size = 0;
-    for (int i = 0; i < len_file;i++) {
-        fread(&length, sizeof(length), 1, file);
-        for (int j = 0; j < 8; j++) {
-            dict[size++] = (length >> (8 - j - 1)) & 1;
+    int i = 0;
+    int count = 0;
+    // for (int i = 0; i < size*8; i++){
+    // while (i < info.st_size*8){
+    while (i < len_file * 8){
+        uint8_t temp_len = 0;
+        for (int j = 0; j < 8 && i < len_file*8; j++){
+            if (get_bit(dict_buffer, i++) == 1){
+                set_bit(&temp_len, j);
+            }
         }
-    }
-//    printf("size : %d\n",size);
-    int switch_read = 1;
-    int x = 0;
-    int y = 0;
-    int i;
-    for (i = 0; i < len_file * 8;) {
-        if (x == 256){
+        if (temp_len == 0){
             break;
         }
-        if (switch_read){
-            length = 0;
-            for (int j = 0; j < 8; j++) {
-                length += pow(2, 8 - j - 1) * dict[i++];
+        len[count] = size;
+        tree_node_t* root = tree->root;
+        uint8_t number = 0;
+        for (int j = 0; j < temp_len; j++){
+            // printf("%d", get_bit(dict_draft, i));
+            if (j == temp_len - 1)
+                node = create_node(1);
+            else
+                node = create_node(0);
+            if ((number = get_bit(dict_buffer, i++)) == 1){
+                set_bit(dict, size);
             }
-            compress->len[x] = length;
-            switch_read = 0;
-        } else{
-            tree_node_t *root = tree->root;
-            y = 0;
-            for (int j = 0; j < length; j++) {
-//                printf("x: %d y: %d dic: %d\n",x,y,i);
-                compress->dic[x][y++] = dict[i++];
-                if (j == length - 1){
-                    node = create_node(1);
-                    node->content = x;
-                } else{
-                    node = create_node(0);
-                }
-                root = insert_node(root, node, dict[i - 1]);
-            }
-            x++;
-            switch_read = 1;
+            root = insert_node(root, node, number);
+            size++;
         }
+        count++;
+        if (count == 256){
+            len[count] = size;
+        }
+
     }
+//    printf("size : %d\n",size);
     compress->tree = tree;
-    free(dict);
+    compress->dict = dict;
+    compress->len = len;
+//    for (i = 0; i < 256; i++){
+//        for (int j = compress->len[i]; j < compress->len[i+1]; j++){
+//            printf("%d", get_bit(compress->dict, j));
+//        }
+//        printf("\n");
+//    }
+//    printf("here\n");
     return compress;
 }
-
 void free_tree(tree_node_t *root){
     if (root == NULL)
         return;
@@ -230,7 +275,7 @@ void free_tree(tree_node_t *root){
     free(root);
 }
 
-void set_bit(char *result,int index,char value){
+void set_message_bit(char *result,int index,char value){
     int i = index/8;
     int pos = index%8;
     value = value << pos;
@@ -268,39 +313,39 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
-                int compress_length = 0;
-                char *compression_message = malloc(sizeof(1));
+                int number_bit = 0;
+                int compress_length = 1;
+                unsigned char *compression_message = malloc(1);
                 if (message.header.require_bit == 1){
 //                    printf("here in\n");
-                    message.header.require_bit = 0;
                     for (int i = 0; i < message.pay_load_length; i++) {
-                        int l = (int)message.pay_load[i];
-                        char digit_length  = data->queue->com_dict->len[l];
-                        compression_message = realloc(compression_message, compress_length + digit_length);
-                        for (int j = 0; j < digit_length; j++){
-                            compression_message[compress_length++] = data->queue->com_dict->dic[l][j];
+                        int c = message.pay_load[i];
+                        int index = data->queue->com_dict->len[c];
+                        for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
+                            if (number_bit == compress_length * 8){
+                                compression_message = realloc(compression_message, ++compress_length);
+                            }
+                            if (get_bit(data->queue->com_dict->dict, j) == 1){
+                                set_bit(compression_message, number_bit++);
+                            } else{
+                                clear_bit(compression_message, number_bit++);
+                            }
                         }
                     }
-                    printf("compression length before: %d\n",compress_length);
-                    if ((compress_length % 8) != 0){
-                        int padding = 8 - (compress_length % 8);
-                        printf("padding %d\n",padding);
-                        compression_message = realloc(compression_message,padding + compress_length);
-                        for (int i = 0; i < padding; i++){
-                            compression_message[compress_length++] = 0;
-                        }
+                    printf("%d\n",number_bit);
+                    printf("%d\n",compress_length);
+                    char gap = abs(number_bit - compress_length);
+                    for (int i = number_bit; i  < compress_length * 8; i++) {
+                        clear_bit(compression_message, i);
                     }
-                    printf("compression length : %d\n",compress_length);
-                    char *result = malloc(compress_length / 8);
-                    for (int i = 0; i < compress_length; i++){
-                        set_bit(result,i, compression_message[i]);
-                    }
+                    compression_message = realloc(compression_message, ++compress_length);
+                    compression_message[compress_length - 1] = gap;
                     free(message.pay_load);
-                    message.pay_load = result;
-                    free(compression_message);
-                    message.pay_load_length = compress_length/8;
+                    message.pay_load_length = compress_length;
+                    message.pay_load = compression_message;
                     message.header.compression_bit = 1;
                 }
+                message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
                 write(data->socket_fd, &v, 8);
@@ -394,6 +439,7 @@ void free_queue(linked_queue_t *queue){
     free(queue->msg);
     free_tree(queue->com_dict->tree->root);
     free(queue->com_dict->tree);
+    free(queue->com_dict->len);
     free(queue->com_dict);
     free(queue);
 }
