@@ -338,7 +338,7 @@ void *connection_handler(void *argv){
                     for (int i = number_bit; i  < compress_length * 8; i++) {
                         clear_bit(compression_message, i);
                     }
-                    printf("%c\n",gap);
+                    printf("%d\n",gap);
                     compression_message = realloc(compression_message, ++compress_length);
                     compression_message[compress_length - 1] = gap;
                     free(message.pay_load);
