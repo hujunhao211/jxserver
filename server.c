@@ -472,9 +472,10 @@ b_file_t* read_binary(char *arg){
     fseek(fp, 0, SEEK_END);
     size_t size = ftell(fp) - 6;
     fseek(fp, 6, SEEK_SET);
-    content->message = malloc(size);
+    content->message = malloc(size + 1);
 //    printf("size %lu\n",size);
     fread(content->message,size, 1, fp);
+    content->message[size] = '\0';
 //    printf("");
     return content;
 }
