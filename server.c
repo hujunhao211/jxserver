@@ -310,7 +310,7 @@ void *connection_handler(void *argv){
                 if (message.header.require_bit == 1){
 //                    printf("here in\n");
                     for (int i = 0; i < message.pay_load_length; i++) {
-                        char c = message.pay_load[i];
+                        int c = message.pay_load[i];
                         int index = data->queue->com_dict->len[c];
                         for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
                             if (number_bit == compress_length * 8){
