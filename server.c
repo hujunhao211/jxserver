@@ -481,7 +481,6 @@ void *connection_handler(void *argv){
                         char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
                         strcpy(file_name, data->queue->msg);
                         strcat(file_name, "/");
-                        
                         strcat(file_name, file);
                         struct stat stat_t;
                         stat(file_name,&stat_t);
@@ -491,6 +490,51 @@ void *connection_handler(void *argv){
                         for (int i = 7; i >= 0; i--) {
                             write(data->socket_fd, &(pay_load[i]), 1);
                         }
+                    } else{
+                        message.header.type_digit = 0x5;
+                        message.header.compression_bit = 1;
+                        message.header.require_bit = 0;
+                        unsigned char header = transform_header(message);
+                        write(data->socket_fd, &header, sizeof(header));
+                        char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
+                        strcpy(file_name, data->queue->msg);
+                        strcat(file_name, "/");
+                        strcat(file_name, file);
+                        struct stat stat_t;
+                        stat(file_name,&stat_t);
+                        uint64_t file_size = stat_t.st_size;
+                        free(file_name);
+                        int number_bit = 0;
+                        int compress_length = 1;
+                        unsigned char *compression_message = malloc(1);
+                        unsigned char* pay_load = (unsigned char*)&file_size;
+                        for (int i  = 0; i  < 8; i++) {
+                            int c = pay_load[i];
+                            int index = data->queue->com_dict->len[c];
+                            for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
+                                if (number_bit == compress_length * 8){
+                                    compression_message = realloc(compression_message, ++compress_length);
+                                }
+                                if (get_bit(data->queue->com_dict->dict, j) == 1){
+                                    set_bit(compression_message, number_bit++);
+                                } else{
+                                    clear_bit(compression_message, number_bit++);
+                                }
+                            }
+                        }
+                        char gap = abs(number_bit - compress_length * 8);
+                        for (int i = number_bit; i  < compress_length * 8; i++) {
+                            clear_bit(compression_message, i);
+                        }
+                        compression_message = realloc(compression_message, ++compress_length);
+                        compression_message[compress_length - 1] = gap;
+                        message.pay_load_length = compress_length;
+                        unsigned char hexBuffer[100] = {0};
+                        memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
+                        for (int i = 7; i >= 0; i--) {
+                            send(data->socket_fd,&(hexBuffer[i]),1,0);
+                        }
+                        write(data->socket_fd, message.pay_load, message.pay_load_length);
                     }
                 }
             } else if(message.header.type_digit == 6){
