@@ -531,6 +531,7 @@ void *connection_handler(void *argv){
                         message.pay_load_length = compress_length;
                         unsigned char hexBuffer[100] = {0};
                         memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
+                        message.pay_load = compression_message;
                         for (int i = 7; i >= 0; i--) {
                             send(data->socket_fd,&(hexBuffer[i]),1,0);
                         }
