@@ -481,6 +481,7 @@ void *connection_handler(void *argv){
                         char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
                         strcpy(file_name, data->queue->msg);
                         strcat(file_name, "/");
+                        
                         strcat(file_name, file);
                         struct stat stat_t;
                         stat(file_name,&stat_t);
