@@ -189,6 +189,18 @@ uint8_t get_bit(uint8_t* array, int index){
     // return 1 & (array[index / 8] << (index % 8));
 }
 
+void clear_bit (uint8_t *array, int index) {
+    int i = index/8;
+    int pos = index%8;
+
+    unsigned int flag = 1;
+
+    flag = flag << (8-pos-1);
+    flag = ~flag;
+
+    array[i] = array[i] & flag;
+}
+
 compress_dict_t* build_compression(){
     tree_node_t *node = NULL;
     compress_dict_t *compress = malloc(sizeof(compress_dict_t));
