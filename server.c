@@ -344,7 +344,7 @@ void *connection_handler(void *argv){
                     free(message.pay_load);
                     printf("comprerss_length: %d\n",compress_length);
                     message.pay_load_length = compress_length;
-                    printf("comprerss_length: %d\n",message.pay_load_length);
+                    printf("comprerss_length: %lu\n",message.pay_load_length);
                     message.pay_load = compression_message;
                     message.header.compression_bit = 1;
                 }
