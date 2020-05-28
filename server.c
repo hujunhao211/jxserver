@@ -61,7 +61,7 @@ typedef struct package{
 typedef struct message{
     struct package header;
     uint64_t pay_load_length;
-    char *pay_load;
+    unsigned char *pay_load;
 }message_t;
 
 typedef struct tree_node{
