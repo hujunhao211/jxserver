@@ -351,7 +351,7 @@ void *connection_handler(void *argv){
                     }
                     message.header.compression_bit = 1;
                     v = compress_length;
-                    
+                    v = htonl(v);
                 }
                 message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
