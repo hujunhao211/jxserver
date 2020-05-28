@@ -342,8 +342,6 @@ void *connection_handler(void *argv){
                                 }
                             }
                         }
-//                        printf("%d\n",number_bit);
-//                        printf("%d\n",compress_length);
                         char gap = abs(number_bit - compress_length * 8);
                         for (int i = number_bit; i  < compress_length * 8; i++) {
                             clear_bit(compression_message, i);
@@ -382,33 +380,32 @@ void *connection_handler(void *argv){
                 int pay_load_length = 0;
                 char *respone = calloc(100, sizeof(char));
                 if (message.header.require_bit == 0){
-                    if ((dir = opendir(data->queue->msg)) == NULL){
-                        return NULL;
-                    }
-                    while ((ent = readdir(dir)) != NULL) {
-                        if (ent->d_type == 8) {
-                            for (int k = 0; k < strlen(ent->d_name); k++) {
-                                respone[pay_load_length + k] = ent->d_name[k];
+                    if ((dir = opendir(data->queue->msg)) != NULL){
+                        while ((ent = readdir(dir)) != NULL) {
+                            if (ent->d_type == 8) {
+                                for (int k = 0; k < strlen(ent->d_name); k++) {
+                                    respone[pay_load_length + k] = ent->d_name[k];
+                                }
+                                pay_load_length += (strlen(ent->d_name) + 1);
+                                respone[pay_load_length - 1] = 0x00;
                             }
-                            pay_load_length += (strlen(ent->d_name) + 1);
-                            respone[pay_load_length - 1] = 0x00;
                         }
-                    }
-                    closedir(dir);
-                    respone[pay_load_length - 1] = 0x00;
-                    respone = realloc(respone, pay_load_length);
-                    if (message.header.require_bit == 0){
-                        uint8_t response_header = 0x30;
-                        send(data->socket_fd, &response_header, 1, 0);
-                        unsigned char hexBuffer[100]={0};
-                        memcpy((char*)hexBuffer,(char*)&message.pay_load_length,sizeof(int));
-                        for(int i=7;i>=0;i--){
-                            send(data->socket_fd, &(hexBuffer[i]),1,0);
+                        closedir(dir);
+                        respone[pay_load_length - 1] = 0x00;
+                        respone = realloc(respone, pay_load_length);
+                        if (message.header.require_bit == 0){
+                            uint8_t response_header = 0x30;
+                            send(data->socket_fd, &response_header, 1, 0);
+                            unsigned char hexBuffer[100]={0};
+                            memcpy((char*)hexBuffer,(char*)&message.pay_load_length,sizeof(int));
+                            for(int i=7;i>=0;i--){
+                                send(data->socket_fd, &(hexBuffer[i]),1,0);
+                            }
+                            // send back file name
+                            send(data->socket_fd, (void*)(respone), message.pay_load_length, 0);
+                        } else{
+                            
                         }
-                        // send back file name
-                        send(data->socket_fd, (void*)(respone), message.pay_load_length, 0);
-                    } else{
-                        
                     }
                 }
                 free(respone);
