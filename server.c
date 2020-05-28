@@ -312,7 +312,7 @@ void *connection_handler(void *argv){
             if (message.pay_load_length > 0)
                 recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
             if(message.header.type_digit == 0x00){
-//                printf("here echo\n");
+                printf("here echo\n");
                 message.header.type_digit = 0x1;
                 int number_bit = 0;
                 int compress_length = 1;
@@ -404,7 +404,53 @@ void *connection_handler(void *argv){
                                 // send back file name
                                 send(data->socket_fd, (void*)(respone), pay_load_length, 0);
                         } else{
-                            
+                            int number_bit = 0;
+                            int compress_length = 1;
+                            unsigned char *compression_message = malloc(1);
+                            while ((ent = readdir(dir)) != NULL) {
+                                if (ent->d_type == 8) {
+                                    for (int k = 0; k < strlen(ent->d_name); k++) {
+                                        int c = ent->d_name[k];
+                                        int index = data->queue->com_dict->len[c];
+                                        for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
+                                            if (number_bit == compress_length * 8){
+                                                compression_message = realloc(compression_message, ++compress_length);
+                                            }
+                                            if (get_bit(data->queue->com_dict->dict, j) == 1){
+                                                set_bit(compression_message, number_bit++);
+                                            } else{
+                                                clear_bit(compression_message, number_bit++);
+                                            }
+                                        }
+                                    }
+                                    for (int k = 0; k < 8; k++) {
+                                        if (number_bit == compress_length * 8){
+                                            compression_message = realloc(compression_message, ++compress_length);
+                                        }
+                                        clear_bit(compression_message, number_bit++);
+                                    }
+                                }
+                            }
+                            closedir(dir);
+                            char gap = abs(number_bit - compress_length * 8);
+                            for (int i = number_bit; i  < compress_length * 8; i++) {
+                                clear_bit(compression_message, i);
+                            }
+                            compression_message = realloc(compression_message, ++compress_length);
+                            compression_message[compress_length - 1] = gap;
+                            message.pay_load_length = compress_length;
+                            //                        printf("comprerss_length: %lu\n",message.pay_load_length);
+                            message.pay_load = compression_message;
+                            message.header.type_digit = 0x3;
+                            message.header.compression_bit = 1;
+                            message.header.require_bit = 0;
+                            unsigned char header = transform_header(message);
+                            write(data->socket_fd, &header, sizeof(header));
+                            unsigned char hexBuffer[100] = {0};
+                            for (int i = 7; i >= 0; i--) {
+                                send(data->socket_fd,&(hexBuffer[i]),1,0);
+                            }
+                            write(data->socket_fd, message.pay_load, message.pay_load_length);
                         }
                     }
                 }
