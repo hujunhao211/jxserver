@@ -313,34 +313,35 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
     //            printf("here echo\n");
                 message.header.type_digit = 0x1;
-//                int number_bit = 0;
-//                int compress_length = 1;
-//                unsigned char *compression_message = malloc(1);
+                int number_bit = 0;
+                int compress_length = 1;
+                unsigned char *compression_message = malloc(1);
                 if (message.header.require_bit == 1){
 //                    printf("here in\n");
-//                    for (int i = 0; i < message.pay_load_length; i++) {
-//                        int c = message.pay_load[i];
-//                        int index = data->queue->com_dict->len[c];
-//                        for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
-//                            if (number_bit == compress_length * 8){
-//                                compression_message = realloc(compression_message, ++compress_length);
-//                            }
-//                            if (get_bit(data->queue->com_dict->dict, j) == 1){
-//                                set_bit(compression_message, number_bit++);
-//                            } else{
-//                                clear_bit(compression_message, number_bit++);
-//                            }
-//                        }
-//                    }
-//                    char gap = abs(number_bit - compress_length);
-//                    for (int i = number_bit; i  < compress_length * 8; i++) {
-//                        clear_bit(compression_message, i);
-//                    }
-//                    compression_message = realloc(compression_message, ++compress_length);
-//                    compression_message[compress_length - 1] = gap;
-//                    free(message.pay_load);
-//                    message.pay_load_length = compress_length;
-//                    message.pay_load = compression_message;
+                    for (int i = 0; i < message.pay_load_length; i++) {
+                        int c = message.pay_load[i];
+                        int index = data->queue->com_dict->len[c];
+                        for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
+                            if (number_bit == compress_length * 8){
+                                compression_message = realloc(compression_message, ++compress_length);
+                            }
+                            if (get_bit(data->queue->com_dict->dict, j) == 1){
+                                set_bit(compression_message, number_bit++);
+                            } else{
+                                clear_bit(compression_message, number_bit++);
+                            }
+                        }
+                    }
+                    char gap = abs(number_bit - compress_length);
+                    for (int i = number_bit; i  < compress_length * 8; i++) {
+                        clear_bit(compression_message, i);
+                    }
+                    compression_message = realloc(compression_message, ++compress_length);
+                    compression_message[compress_length - 1] = gap;
+                    free(message.pay_load);
+                    message.pay_load_length = compress_length;
+                    message.pay_load = compression_message;
+                    message.header.compression_bit = 1;
                 }
                 message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
