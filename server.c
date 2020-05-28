@@ -320,6 +320,7 @@ void *connection_handler(void *argv){
                     message.header.compression_bit = 1;
 //                    printf("here in\n");
                     if (message.header.compression_bit == 1){
+                        printf("???\n");
                         message.header.require_bit = 0;
                         unsigned char header = transform_header(message);
                         write(data->socket_fd, &header, sizeof(header));
