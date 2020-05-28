@@ -543,7 +543,7 @@ void *connection_handler(void *argv){
                         for (int i = 7; i >= 0; i--) {
                             send(data->socket_fd,&(hexBuffer[i]),1,0);
                         }
-                        write(data->socket_fd, message.pay_load, 1);
+                        write(data->socket_fd, message.pay_load, message.pay_load_length);
 
                     }
                 }
