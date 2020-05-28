@@ -327,7 +327,6 @@ void *connection_handler(void *argv){
                         write(data->socket_fd, &v, 8);
                         write(data->socket_fd, message.pay_load, message.pay_load_length);
                     } else{
-                        
                         for (int i = 0; i < message.pay_load_length; i++) {
                             int c = message.pay_load[i];
                             int index = data->queue->com_dict->len[c];
@@ -367,11 +366,11 @@ void *connection_handler(void *argv){
                     }
 //                    v = htons(v);
                 } else{
-                message.header.require_bit = 0;
-                unsigned char header = transform_header(message);
-                write(data->socket_fd, &header, sizeof(header));
-                write(data->socket_fd, &v, 8);
-                write(data->socket_fd, message.pay_load, message.pay_load_length);
+                    message.header.require_bit = 0;
+                    unsigned char header = transform_header(message);
+                    write(data->socket_fd, &header, sizeof(header));
+                    write(data->socket_fd, &v, 8);
+                    write(data->socket_fd, message.pay_load, message.pay_load_length);
                 }
             } else if(message.header.type_digit == 2){
                 printf("2\n");
@@ -398,7 +397,7 @@ void *connection_handler(void *argv){
                             uint8_t response_header = 0x30;
                             send(data->socket_fd, &response_header, 1, 0);
                             unsigned char hexBuffer[100]={0};
-                            memcpy((char*)hexBuffer,(char*)&message.pay_load_length,sizeof(int));
+                            memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
                             for(int i=7;i>=0;i--){
                                 send(data->socket_fd, &(hexBuffer[i]),1,0);
                             }
