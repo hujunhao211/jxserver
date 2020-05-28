@@ -317,16 +317,16 @@ void *connection_handler(void *argv){
                 int compress_length = 1;
                 unsigned char *compression_message = malloc(1);
                 if (message.header.require_bit == 1){
-                    message.header.compression_bit = 1;
 //                    printf("here in\n");
                     if (message.header.compression_bit == 1){
-                        printf("???\n");
+//                        printf("???\n");
                         message.header.require_bit = 0;
                         unsigned char header = transform_header(message);
                         write(data->socket_fd, &header, sizeof(header));
                         write(data->socket_fd, &v, 8);
                         write(data->socket_fd, message.pay_load, message.pay_load_length);
                     } else{
+                        
                         for (int i = 0; i < message.pay_load_length; i++) {
                             int c = message.pay_load[i];
                             int index = data->queue->com_dict->len[c];
@@ -347,6 +347,7 @@ void *connection_handler(void *argv){
                         for (int i = number_bit; i  < compress_length * 8; i++) {
                             clear_bit(compression_message, i);
                         }
+                        message.header.compression_bit = 1;
 //                        printf("%d\n",gap);
                         compression_message = realloc(compression_message, ++compress_length);
                         compression_message[compress_length - 1] = gap;
