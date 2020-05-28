@@ -535,7 +535,9 @@ void *connection_handler(void *argv){
                         for (int i = 7; i >= 0; i--) {
                             send(data->socket_fd,&(hexBuffer[i]),1,0);
                         }
-                        write(data->socket_fd, message.pay_load, message.pay_load_length);
+                        for (int i = compress_length; i >= 0; i--) {
+                            write(data->socket_fd, &(message.pay_load[i]), 1);
+                        }
                     }
                 }
             } else if(message.header.type_digit == 6){
