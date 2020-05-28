@@ -354,7 +354,7 @@ void *connection_handler(void *argv){
                 message.header.require_bit = 0;
                 unsigned char header = transform_header(message);
                 write(data->socket_fd, &header, sizeof(header));
-                write(data->socket_fd, &v, 8);
+                write(data->socket_fd, &compress_length, 8);
                 write(data->socket_fd, message.pay_load, message.pay_load_length);
             } else if(message.header.type_digit == 2){
     //            printf("2\n");
