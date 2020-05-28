@@ -19,6 +19,7 @@
 #include <byteswap.h>
 #include <endian.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #define SIZE (20)
 #define SERVER_MSG ("compression.dict")
 //#include <libkern/OSByteOrder.h>
@@ -447,6 +448,49 @@ void *connection_handler(void *argv){
                 free(respone);
             } else if(message.header.type_digit == 4){
 //                printf("4\n");
+                char *file = (char*)message.pay_load;
+                int number = 0;
+                char** files = malloc(1);
+                DIR *dir;
+                struct dirent* ent;
+                if ((dir = opendir(data->queue->msg)) != NULL){
+                    while ((ent = readdir(dir)) != NULL) {
+                        if (ent->d_type == DT_REG){
+                            files = realloc(files, (++number) * sizeof(char*));
+                            files[number - 1] = ent->d_name;
+                        }
+                    }
+                }
+                int found = 0;
+                for (int i = 0; i < number; i++) {
+                    if (strcmp(files[i],file) == 0){
+                        found = 1;
+                        break;
+                    }
+                }
+                if (found == 0){
+                    uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
+                    write(data->socket_fd, response, 9);
+                } else{
+                    if (message.header.require_bit == 0){
+                        uint8_t header = {0x50};
+                        write(data->socket_fd, &header, sizeof(header));
+                        uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
+                        write(data->socket_fd, &pay_load_len, 8);
+                        char *file_name = malloc(strlen(data->queue->msg)) + 3 + strlen(file);
+                        strcpy(file_name, data->queue->msg);
+                        strcat(file_name, "/");
+                        strcat(file_name, file);
+                        struct stat stat_t;
+                        stat(file_name,&stat_t);
+                        uint64_t file_size = stat_t.st_size;
+                        free(file_name);
+                        unsigned char* pay_load = (unsigned char*)&file_size;
+                        for (int i = 7; i >= 0; i--) {
+                            write(data->socket_fd, &(pay_load[i]), 1);
+                        }
+                    }
+                }
             } else if(message.header.type_digit == 6){
 //                printf("6\n");
             } else if(message.header.type_digit == 8){
