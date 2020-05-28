@@ -334,7 +334,7 @@ void *connection_handler(void *argv){
                     }
                     printf("%d\n",number_bit);
                     printf("%d\n",compress_length);
-                    char gap = abs(number_bit - compress_length);
+                    char gap = abs(number_bit - compress_length * 8);
                     for (int i = number_bit; i  < compress_length * 8; i++) {
                         clear_bit(compression_message, i);
                     }
