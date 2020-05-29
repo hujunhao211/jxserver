@@ -694,10 +694,9 @@ void *connection_handler(void *argv){
                     char *decompression_array = malloc(1);
                     int size = 0;
                     uint64_t length = (message.pay_load[message.pay_load_length - 1]);
-                    printf("length is what %ld\n",(long)length);
+                    printf("length is what %lu\n",(long)length);
                     tree_node_t *root = data->queue->com_dict->tree->root;
                     long gap = (message.pay_load_length - 1) * 8 - length;
-                    printf("gap: %lu\n",gap);
                     for (int i = 0; i < gap; i++) {
                         if (get_bit(message.pay_load, i) == 1){
                             root = root->right;
@@ -715,10 +714,15 @@ void *connection_handler(void *argv){
                             }
                         }
                     }
-//                    uint8_t session_id[4] = {0};
-                    printf("size: %d\n",size);
+                    uint32_t session_id = 0;
                     char * target_file = strdup(decompression_array + 20);
                     printf("%s\n",target_file);
+                    memcpy(&session_id, decompression_array, 4);
+                    uint64_t offset = parse((unsigned char*)&decompression_array[4]);
+                    uint64_t offset_length = parse((unsigned char*)&decompression_array[12]);
+                    printf("%lu\n",(long)offset);
+                    printf("%lu\n",(long)offset_length);
+                    
 //                    char * file = malloc();
                 }
 //                printf("6\n");
