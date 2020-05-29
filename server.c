@@ -722,11 +722,11 @@ void *connection_handler(void *argv){
                                     printf("multiplex is 1\n");
                                     unsigned char header = {0x70};
                                     write(data->socket_fd, &header, 1);
-//                                    uint64_t pay_length = offset_length + 20;
-//                                    unsigned char*result = (unsigned char *)&pay_length;
-//                                    for(int i = 7;  i >= 0; i--){
-//                                        write(data->socket_fd, &result[i], 1);
-//                                    }
+                                    uint64_t pay_length = 0;
+                                    unsigned char*result = (unsigned char *)&pay_length;
+                                    for(int i = 7;  i >= 0; i--){
+                                        write(data->socket_fd, &result[i], 1);
+                                    }
                                 }
                             } else{
                                 int number_bit = 0;
