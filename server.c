@@ -336,11 +336,11 @@ void compressed(struct connect_data* data,uint8_t ** compression_message,int c,i
 }
 
 
-int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length){
+int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
     int find = 0;
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
-        if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length) {
+        if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(session->session_ids[i].file_name, file_name) == 0) {
             find = 1;
         }
     }
@@ -348,9 +348,27 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
+        session->session_ids[session->size - 1].file_name = file_name;
+        session->session_ids[session->size - 1].offset = offset;
+        session->session_ids[session->size - 1].length = length;
     }
     pthread_mutex_unlock(&(session->lock));
     return find;
+}
+
+void remove_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length, char * file_name){
+    pthread_mutex_lock(&(session->lock));
+    for (int i = 0; i < session->size; i++) {
+        if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(file_name, session->session_ids[i].file_name) == 0) {
+            session->session_ids[i].file_name = session->session_ids[session->size - 1].file_name;
+            session->session_ids[i].length = session->session_ids[session->size - 1].length;
+            session->session_ids[i].value = session->session_ids[session->size - 1].value;
+            session->session_ids[i].offset = session->session_ids[session->size - 1].offset;
+            break;
+        }
+    }
+    session->size--;
+    pthread_mutex_unlock(&(session->lock));
 }
 
 char *check(char* file,struct connect_data* data,uint64_t* file_size){
@@ -677,23 +695,35 @@ void *connection_handler(void *argv){
                             uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                             write(data->socket_fd, response, 9);
                         } else {
+                            int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                             FILE *fp = fopen(file, "r");
                             fseek(fp, offset, SEEK_SET);
                             unsigned char* file_content = malloc(offset_length);
                             fread(file_content, offset_length, 1, fp);
                             if (message.header.require_bit == 0) {
-                                unsigned char header = {0x70};
-                                write(data->socket_fd, &header, 1);
-                                uint64_t pay_length = offset_length + 20;
-                                unsigned char*result = (unsigned char *)&pay_length;
-                                for(int i = 7;  i >= 0; i--){
-                                    write(data->socket_fd, &result[i], 1);
+                                if (multiplex){
+                                    unsigned char header = {0x70};
+                                    write(data->socket_fd, &header, 1);
+                                    uint64_t pay_length = offset_length + 20;
+                                    unsigned char*result = (unsigned char *)&pay_length;
+                                    for(int i = 7;  i >= 0; i--){
+                                        write(data->socket_fd, &result[i], 1);
+                                    }
+                                    write(data->socket_fd, &session_id , 4);
+                                    write(data->socket_fd, &old_offset, 8);
+                                    write(data->socket_fd, &old_offset_length, 8);
+                                    write(data->socket_fd, file_content, offset_length);
+                                    fclose(fp);
+                                    remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
+                                } else{
+                                    unsigned char header = {0x70};
+                                    write(data->socket_fd, &header, 1);
+                                    uint64_t pay_length = offset_length + 20;
+                                    unsigned char*result = (unsigned char *)&pay_length;
+                                    for(int i = 7;  i >= 0; i--){
+                                        write(data->socket_fd, &result[i], 1);
+                                    }
                                 }
-                                write(data->socket_fd, &session_id , 4);
-                                write(data->socket_fd, &old_offset, 8);
-                                write(data->socket_fd, &old_offset_length, 8);
-                                write(data->socket_fd, file_content, offset_length);
-                                fclose(fp);
                             } else{
                                 int number_bit = 0;
                                 int compress_length = 1;
