@@ -262,10 +262,13 @@ compress_dict_t* build_compression(){
         uint8_t number = 0;
         for (int j = 0; j < temp_len; j++){
             // printf("%d", get_bit(dict_draft, i));
-            if (j == temp_len - 1)
+            if (j == temp_len - 1){
                 node = create_node(1);
-            else
+                node->content = count;
+            }
+            else{
                 node = create_node(0);
+            }
             if ((number = get_bit(dict_buffer, i++)) == 1){
                 set_bit(dict, size);
             }
@@ -325,6 +328,50 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
     return find;
 }
 
+char *check(char* file,struct connect_data* data,uint64_t* file_size){
+    int number = 0;
+    char** files = malloc(1);
+    DIR *dir;
+    struct dirent* ent;
+    if ((dir = opendir(data->queue->msg)) != NULL){
+        while ((ent = readdir(dir)) != NULL) {
+            if (ent->d_type == DT_REG){
+                files = realloc(files, (++number) * sizeof(char*));
+                files[number - 1] = ent->d_name;
+            }
+        }
+    }
+    int found = 0;
+    for (int i = 0; i < number; i++) {
+        if (strcmp(files[i],file) == 0){
+            found = 1;
+            break;
+        }
+    }
+    if (found == 0){
+        uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
+        write(data->socket_fd, response, 9);
+        return NULL;
+    }
+    char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
+    strcpy(file_name, data->queue->msg);
+    strcat(file_name, "/");
+    strcat(file_name, file);
+    struct stat stat_t;
+    stat(file_name,&stat_t);
+    *file_size = stat_t.st_size;
+    return file_name;
+}
+
+uint64_t parse(uint8_t *v){
+    uint64_t val = v[7];
+    int pos = 6;
+    for (int i = 1; i < 8; i++) {
+        val = val | v[i] << (8 * i);
+        pos--;
+    }
+    return val;
+}
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
@@ -352,9 +399,9 @@ void *connection_handler(void *argv){
             message.pay_load = malloc(message.pay_load_length);
     //        printf("type_digit: %x\n",(int)message.header.type_digit);
     //        printf("%x\n",message.pay_load_length);
-            if (message.pay_load_length > 0)
-                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
             if(message.header.type_digit == 0x00){
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("here echo\n");
                 message.header.type_digit = 0x1;
                 int number_bit = 0;
@@ -416,6 +463,8 @@ void *connection_handler(void *argv){
                     write(data->socket_fd, message.pay_load, message.pay_load_length);
                 }
             } else if(message.header.type_digit == 2){
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("2\n");
                 DIR* dir;
                 struct dirent* ent;
@@ -489,6 +538,8 @@ void *connection_handler(void *argv){
                 }
                 free(respone);
             } else if(message.header.type_digit == 4){
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("4\n");
                 char *file = (char*)message.pay_load;
                 int number = 0;
@@ -579,17 +630,23 @@ void *connection_handler(void *argv){
                             send(data->socket_fd,&(hexBuffer[i]),1,0);
                         }
                         write(data->socket_fd, message.pay_load, message.pay_load_length);
-
                     }
                 }
             } else if(message.header.type_digit == 6){
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("6\n");
                 
+                
             } else if(message.header.type_digit == 8){
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
             } else {
+                if (message.pay_load_length > 0)
+                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("?\n");
                 // Send it using exactly the same syscalls as for other file descriptors
                 message.header.type_digit = 0xf;
