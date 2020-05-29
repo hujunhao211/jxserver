@@ -740,9 +740,11 @@ void *connection_handler(void *argv){
                             for (int i = 7; i >= 0; i--) {
                                 write(data->socket_fd, &result[i], 1);
                             }
+                            uint64_t new_offset = swap_uint64(offset);
+                            uint64_t new_offset_length = swap_uint64(offset_length);
                             write(data->socket_fd, &session_id, 4);
-                            write(data->socket_fd, &decompression_array[4], 8);
-                            write(data->socket_fd, &decompression_array[12], 8);
+                            write(data->socket_fd, &(new_offset), 8);
+                            write(data->socket_fd, &(new_offset_length), 8);
                             write(data->socket_fd, file_content, offset_length);
                         }
                         free(file_path);
@@ -754,7 +756,7 @@ void *connection_handler(void *argv){
                 
             } else if(message.header.type_digit == 8){
                 if (message.pay_load_length > 0)
-                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
+                    recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("8\n");
                 data->queue->shutdown_flag = 1;
                 break;
