@@ -731,6 +731,7 @@ void *connection_handler(void *argv){
                             write(data->socket_fd, response, 9);
                         } else{
                             FILE *fp = fopen(file_path, "r");
+                            fseek(fp, offset, SEEK_SET);
                             unsigned char* file_content = malloc(offset_length);
                             fread(file_content, offset_length, 1, fp);
                             uint8_t header = {0x70};
