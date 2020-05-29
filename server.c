@@ -714,7 +714,7 @@ void *connection_handler(void *argv){
                             }
                         }
                     }
-                    uint8_t session_id[4] = {0};
+//                    uint8_t session_id[4] = {0};
                     char * target_file = strdup(decompression_array + 20);
                     printf("%s\n",target_file);
 //                    char * file = malloc();
