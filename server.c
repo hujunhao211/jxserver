@@ -694,9 +694,10 @@ void *connection_handler(void *argv){
                     char *decompression_array = malloc(1);
                     int size = 0;
                     uint64_t length = swap_uint64(message.pay_load[message.pay_load_length - 1]);
-                    printf("length is what %llu\n",length);
+                    printf("length is what %ld\n",(long)length);
                     tree_node_t *root = data->queue->com_dict->tree->root;
                     long gap = (message.pay_load_length - 1) * 8 - length;
+                    printf("gap: %lu\n",gap);
                     for (int i = 0; i < gap; i++) {
                         if (get_bit(message.pay_load, i) == 1){
                             root = root->right;
