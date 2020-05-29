@@ -697,7 +697,6 @@ void *connection_handler(void *argv){
                             uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                             write(data->socket_fd, response, 9);
                         } else {
-                            printf("multiplex return: %d\n",multiplex);
                             FILE *fp = fopen(file, "r");
                             fseek(fp, offset, SEEK_SET);
                             unsigned char* file_content = malloc(offset_length);
