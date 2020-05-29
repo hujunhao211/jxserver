@@ -722,7 +722,31 @@ void *connection_handler(void *argv){
                     uint64_t offset_length = parse((unsigned char*)&decompression_array[12]);
                     printf("%lu\n",(long)offset);
                     printf("%lu\n",(long)offset_length);
-                    
+                    uint64_t file_size = 0;
+                    char *file_path = check(target_file, data, &file_size);
+                    if (file_path != NULL){
+                        uint64_t range = offset + offset_length;
+                        if (range > file_size){
+                            uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
+                            write(data->socket_fd, response, 9);
+                        } else{
+                            FILE *fp = fopen(file_path, "r");
+                            unsigned char* file_content = malloc(offset_length);
+                            fread(file_content, offset_length, 1, fp);
+                            uint8_t header = {0x70};
+                            write(data->socket_fd, &header, 1);
+                            uint64_t pay_load_length = offset_length + 20;
+                            unsigned char* result = (unsigned char *)&pay_load_length;
+                            for (int i = 7; i >= 0; i--) {
+                                write(data->socket_fd, &result[i], 1);
+                            }
+                            write(data->socket_fd, &session_id, 4);
+                            write(data->socket_fd, &decompression_array[4], 8);
+                            write(data->socket_fd, &decompression_array[12], 8);
+                            write(data->socket_fd, file_content, offset_length);
+                        }
+                        free(file_path);
+                    }
 //                    char * file = malloc();
                 }
 //                printf("6\n");
