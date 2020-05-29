@@ -730,23 +730,25 @@ void *connection_handler(void *argv){
                             uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                             write(data->socket_fd, response, 9);
                         } else{
-                            FILE *fp = fopen(file_path, "r");
-                            fseek(fp, offset, SEEK_SET);
-                            unsigned char* file_content = malloc(offset_length);
-                            fread(file_content, offset_length, 1, fp);
-                            uint8_t header = {0x70};
-                            write(data->socket_fd, &header, 1);
-                            uint64_t pay_load_length = offset_length + 20;
-                            unsigned char* result = (unsigned char *)&pay_load_length;
-                            for (int i = 7; i >= 0; i--) {
-                                write(data->socket_fd, &result[i], 1);
+                            if (message.header.require_bit == 0){
+                                FILE *fp = fopen(file_path, "r");
+                                fseek(fp, offset, SEEK_SET);
+                                unsigned char* file_content = malloc(offset_length);
+                                fread(file_content, offset_length, 1, fp);
+                                uint8_t header = {0x70};
+                                write(data->socket_fd, &header, 1);
+                                uint64_t pay_load_length = offset_length + 20;
+                                unsigned char* result = (unsigned char *)&pay_load_length;
+                                for (int i = 7; i >= 0; i--) {
+                                    write(data->socket_fd, &result[i], 1);
+                                }
+                                uint64_t new_offset = swap_uint64(offset);
+                                uint64_t new_offset_length = swap_uint64(offset_length);
+                                write(data->socket_fd, &session_id, 4);
+                                write(data->socket_fd, &(new_offset), 8);
+                                write(data->socket_fd, &(new_offset_length), 8);
+                                write(data->socket_fd, file_content, offset_length);
                             }
-                            uint64_t new_offset = swap_uint64(offset);
-                            uint64_t new_offset_length = swap_uint64(offset_length);
-                            write(data->socket_fd, &session_id, 4);
-                            write(data->socket_fd, &(new_offset), 8);
-                            write(data->socket_fd, &(new_offset_length), 8);
-                            write(data->socket_fd, file_content, offset_length);
                         }
                         free(file_path);
                     }
