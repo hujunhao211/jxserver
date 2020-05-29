@@ -704,8 +704,8 @@ void *connection_handler(void *argv){
                             unsigned char* file_content = malloc(offset_length);
                             fread(file_content, offset_length, 1, fp);
                             if (message.header.require_bit == 0) {
-                                if (multiplex){
-                                    printf("multiplex is 1\n");
+                                if (!multiplex){
+                                    printf("multiplex is 0\n");
                                     unsigned char header = {0x70};
                                     write(data->socket_fd, &header, 1);
                                     uint64_t pay_length = offset_length + 20;
@@ -720,7 +720,7 @@ void *connection_handler(void *argv){
                                     fclose(fp);
                                     remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
                                 } else{
-                                    printf("multiplex is 0\n");
+                                    printf("multiplex is 1\n");
                                     unsigned char header = {0x70};
                                     write(data->socket_fd, &header, 1);
                                     uint64_t pay_length = offset_length + 20;
