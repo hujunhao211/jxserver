@@ -40,6 +40,7 @@ typedef struct linked_queue{
     int shutdown_flag;
     char *msg;
     struct compress_dic *com_dict;
+    struct session *session;
 }linked_queue_t;
 
 typedef struct b_file{
@@ -82,6 +83,20 @@ typedef struct compress_dic{
     uint8_t *dict;
     int *len;
 }compress_dict_t;
+
+typedef struct session_segment{
+    uint32_t value;
+    uint64_t length;
+    uint64_t offset;
+}session_segment_t;
+
+typedef struct session{
+    session_segment_t *session_ids;
+    uint64_t capacity;
+    uint64_t size;
+    pthread_mutex_t lock;
+}session_t;
+
 
 
 void enqueue(linked_queue_t *queue, struct connect_data* data){
@@ -290,6 +305,26 @@ void set_message_bit(char *result,int index,char value){
     value = value << pos;
     result[i] = result[i] | value;
 }
+
+
+
+int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length){
+    int find = 0;
+    pthread_mutex_lock(&(session->lock));
+    for (int i = 0; i < session->size; i++) {
+        if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length) {
+            find = 1;
+        }
+    }
+    if(!find){
+        if (session->size == session->capacity)
+            session->session_ids = realloc(session->session_ids, session->capacity * 2);
+        session->session_ids[session->size++].value = id;
+    }
+    pthread_mutex_unlock(&(session->lock));
+    return find;
+}
+
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
@@ -549,6 +584,7 @@ void *connection_handler(void *argv){
                 }
             } else if(message.header.type_digit == 6){
 //                printf("6\n");
+                
             } else if(message.header.type_digit == 8){
 //                printf("8\n");
                 data->queue->shutdown_flag = 1;
@@ -633,6 +669,9 @@ void free_queue(linked_queue_t *queue){
     free(queue->msg);
     free_tree(queue->com_dict->tree->root);
     free(queue->com_dict->tree);
+    free(queue->session->session_ids);
+    pthread_mutex_destroy(&(queue->session->lock));
+    free(queue->session);
     free(queue->com_dict->len);
     free(queue->com_dict);
     free(queue);
@@ -683,6 +722,13 @@ int main(int argc, char** argv){
         pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
     }
     queue->com_dict = build_compression();
+    session_t *session = malloc(sizeof(session_t));
+    session->capacity = 20;
+    session->size = 0;
+    session->session_ids = calloc(20, sizeof(session_segment_t));
+    pthread_mutex_init(&(session->lock), NULL);
+    queue->session = session;
+    
     while (1) {
         if (queue->shutdown_flag)
             break;
