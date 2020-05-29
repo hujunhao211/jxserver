@@ -693,7 +693,7 @@ void *connection_handler(void *argv){
 //                    printf("%llu\n",message.pay_load_length);
                     char *decompression_array = malloc(1);
                     int size = 0;
-                    uint64_t length = swap_uint64(message.pay_load[message.pay_load_length - 1]);
+                    uint64_t length = (message.pay_load[message.pay_load_length - 1]);
                     printf("length is what %ld\n",(long)length);
                     tree_node_t *root = data->queue->com_dict->tree->root;
                     long gap = (message.pay_load_length - 1) * 8 - length;
