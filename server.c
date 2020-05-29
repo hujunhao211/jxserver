@@ -698,6 +698,7 @@ void *connection_handler(void *argv){
                             write(data->socket_fd, response, 9);
                         } else {
                             int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
+                            printf("multiplex return: %d\n",multiplex);
                             FILE *fp = fopen(file, "r");
                             fseek(fp, offset, SEEK_SET);
                             unsigned char* file_content = malloc(offset_length);
