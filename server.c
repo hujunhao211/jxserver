@@ -697,13 +697,13 @@ void *connection_handler(void *argv){
                             uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                             write(data->socket_fd, response, 9);
                         } else {
-                            int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                             printf("multiplex return: %d\n",multiplex);
                             FILE *fp = fopen(file, "r");
                             fseek(fp, offset, SEEK_SET);
                             unsigned char* file_content = malloc(offset_length);
                             fread(file_content, offset_length, 1, fp);
                             if (message.header.require_bit == 0) {
+                                int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                                 if (!multiplex){
                                     printf("multiplex is 0\n");
                                     unsigned char header = {0x70};
