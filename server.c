@@ -345,7 +345,7 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         }
     }
     if(!find){
-        printf("here\n");
+//        printf("here\n");
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
@@ -361,7 +361,7 @@ void remove_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
         if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(file_name, session->session_ids[i].file_name) == 0) {
-            printf("remove\n");
+//            printf("remove\n");
             session->session_ids[i].file_name = session->session_ids[session->size - 1].file_name;
             session->session_ids[i].length = session->session_ids[session->size - 1].length;
             session->session_ids[i].value = session->session_ids[session->size - 1].value;
@@ -704,7 +704,7 @@ void *connection_handler(void *argv){
                             if (message.header.require_bit == 0) {
                                 int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                                 if (!multiplex){
-                                    printf("multiplex is 0\n");
+//                                    printf("multiplex is 0\n");
                                     unsigned char header = {0x70};
                                     write(data->socket_fd, &header, 1);
                                     uint64_t pay_length = offset_length + 20;
@@ -719,7 +719,7 @@ void *connection_handler(void *argv){
                                     fclose(fp);
                                     remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
                                 } else{
-                                    printf("multiplex is 1\n");
+//                                    printf("multiplex is 1\n");
                                     unsigned char header = {0x70};
                                     write(data->socket_fd, &header, 1);
                                     uint64_t pay_length = 0;
