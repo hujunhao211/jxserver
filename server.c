@@ -677,7 +677,6 @@ void *connection_handler(void *argv){
                             uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                             write(data->socket_fd, response, 9);
                         } else {
-                            if (message.header.require_bit == 0){
                                 FILE *fp = fopen(file, "r");
                                 fseek(fp, offset, SEEK_SET);
                                 unsigned char* file_content = malloc(offset_length);
@@ -739,7 +738,6 @@ void *connection_handler(void *argv){
                                     write(data->socket_fd, message.pay_load, message.pay_load_length);
                                 }
                             }
-                        }
                         free(file);
                         free(file_name);
                     }
