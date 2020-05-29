@@ -345,6 +345,7 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         }
     }
     if(!find){
+        printf("here\n");
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
