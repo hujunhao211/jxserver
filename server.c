@@ -692,7 +692,7 @@ void *connection_handler(void *argv){
 //                    printf("4\n");
 //                    printf("%llu\n",message.pay_load_length);
                     char *decompression_array = malloc(1);
-                    int size = 1;
+                    int size = 0;
                     uint64_t length = swap_uint64(message.pay_load[message.pay_load_length - 1]);
 //                    printf("length is what %llu\n",length);
                     tree_node_t *root = data->queue->com_dict->tree->root;
@@ -702,16 +702,21 @@ void *connection_handler(void *argv){
                             root = root->right;
                             if (root->is_external == 1){
                                 decompression_array = realloc(decompression_array, ++size);
+                                decompression_array[size - 1] = root->content;
                                 root = data->queue->com_dict->tree->root;
                             }
                         } else{
                             root = root->left;
                             if (root->is_external == 1){
                                 decompression_array = realloc(decompression_array, ++size);
+                                decompression_array[size - 1] = root->content;
                                 root = data->queue->com_dict->tree->root;
                             }
                         }
                     }
+                    uint8_t session_id[4] = {0};
+                    char * target_file = strdup(decompression_array + 20);
+//                    char * file = malloc();
                 }
 //                printf("6\n");
                 
