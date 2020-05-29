@@ -361,6 +361,7 @@ void remove_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
         if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(file_name, session->session_ids[i].file_name) == 0) {
+            printf("remove\n");
             session->session_ids[i].file_name = session->session_ids[session->size - 1].file_name;
             session->session_ids[i].length = session->session_ids[session->size - 1].length;
             session->session_ids[i].value = session->session_ids[session->size - 1].value;
