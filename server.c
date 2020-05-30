@@ -430,26 +430,25 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
 }
 
 
-void echo_message(message_t* message_p,struct connect_data* data,uint64_t v){
-    message_t message = *message_p;
-    if (message.pay_load_length > 0)
-        recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-    message.header.type_digit = 0x1;
+void echo_message(message_t* message,struct connect_data* data,uint64_t v){
+    if (message->pay_load_length > 0)
+        recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
+    message->header.type_digit = 0x1;
     int number_bit = 0;
     int compress_length = 1;
     unsigned char *compression_message = malloc(1);
-    if (message.header.require_bit == 1){
+    if (message->header.require_bit == 1){
     //                    printf("here in\n");
-        if (message.header.compression_bit == 1){
+        if (message->header.compression_bit == 1){
     //                        printf("???\n");
-            message.header.require_bit = 0;
-            unsigned char header = transform_header(message);
+            message->header.require_bit = 0;
+            unsigned char header = transform_header(*message);
             write(data->socket_fd, &header, sizeof(header));
             write(data->socket_fd, &v, 8);
-            write(data->socket_fd, message.pay_load, message.pay_load_length);
+            write(data->socket_fd, message->pay_load, message->pay_load_length);
         } else{
-            for (int i = 0; i < message.pay_load_length; i++) {
-                int c = message.pay_load[i];
+            for (int i = 0; i < message->pay_load_length; i++) {
+                int c = message->pay_load[i];
                 int index = data->queue->com_dict->len[c];
                 for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
                     if (number_bit == compress_length * 8){
@@ -466,32 +465,32 @@ void echo_message(message_t* message_p,struct connect_data* data,uint64_t v){
             for (int i = number_bit; i  < compress_length * 8; i++) {
                 clear_bit(compression_message, i);
             }
-            message.header.compression_bit = 1;
+            message->header.compression_bit = 1;
     //                        printf("%d\n",gap);
             compression_message = realloc(compression_message, ++compress_length);
             compression_message[compress_length - 1] = gap;
-            free(message.pay_load);
+            free(message->pay_load);
     //                        printf("comprerss_length: %d\n",compress_length);
-            message.pay_load_length = compress_length;
+            message->pay_load_length = compress_length;
     //                        printf("comprerss_length: %lu\n",message.pay_load_length);
-            message.pay_load = compression_message;
-            message.header.require_bit = 0;
+            message->pay_load = compression_message;
+            message->header.require_bit = 0;
             unsigned char hexBuffer[100] = {0};
-            memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
-            unsigned char header = transform_header(message);
+            memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
+            unsigned char header = transform_header(*message);
             write(data->socket_fd, &header, sizeof(header));
             for (int i = 7; i >= 0; i--) {
                 send(data->socket_fd,&(hexBuffer[i]),1,0);
             }
-            write(data->socket_fd, message.pay_load, message.pay_load_length);
+            write(data->socket_fd, message->pay_load, message->pay_load_length);
         }
     //                    v = htons(v);
     } else{
-        message.header.require_bit = 0;
-        unsigned char header = transform_header(message);
+        message->header.require_bit = 0;
+        unsigned char header = transform_header(*message);
         write(data->socket_fd, &header, sizeof(header));
         write(data->socket_fd, &v, 8);
-        write(data->socket_fd, message.pay_load, message.pay_load_length);
+        write(data->socket_fd, message->pay_load, message->pay_load_length);
     }
 }
 void *connection_handler(void *argv){
