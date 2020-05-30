@@ -394,6 +394,12 @@ void remove_session_id(session_t* archive,session_t* session, uint32_t id,uint64
     pthread_mutex_unlock(&(session->lock));
 }
 
+void send_error_message(struct connect_data *data){
+    uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
+    write(data->socket_fd, response, 9);
+}
+
+
 char *check(char* file,struct connect_data* data,uint64_t* file_size){
     int number = 0;
     char** files = malloc(1);
@@ -415,8 +421,7 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
         }
     }
     if (found == 0){
-        uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
-        write(data->socket_fd, response, 9);
+        send_error_message(data);
         return NULL;
     }
     char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
@@ -601,8 +606,7 @@ void *connection_handler(void *argv){
                     }
                 }
                 if (found == 0){
-                    uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
-                    write(data->socket_fd, response, 9);
+                    send_error_message(data);
                 } else{
                     if (message.header.require_bit == 0){
                         uint8_t header = {0x50};
@@ -696,8 +700,7 @@ void *connection_handler(void *argv){
                     if (file != NULL){
                         uint64_t range = offset + offset_length;
                         if (range > file_size){
-                            uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
-                            write(data->socket_fd, response, 9);
+                            send_error_message(data);
                         } else {
                             FILE *fp = fopen(file, "r");
                             fseek(fp, offset, SEEK_SET);
@@ -733,8 +736,7 @@ void *connection_handler(void *argv){
                                     }
                                 } else {
 //                                    printf("should not in2\n");
-                                    uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
-                                    write(data->socket_fd, response, 9);
+                                    send_error_message(data);
                                 }
                             } else{
                                 int number_bit = 0;
@@ -824,8 +826,7 @@ void *connection_handler(void *argv){
                     if (file_path != NULL){
                         uint64_t range = offset + offset_length;
                         if (range > file_size){
-                            uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
-                            write(data->socket_fd, response, 9);
+                            send_error_message(data);
                         } else{
                             if (message.header.require_bit == 0){
                                 FILE *fp = fopen(file_path, "r");
@@ -910,14 +911,10 @@ void *connection_handler(void *argv){
                 break;
             } else {
                 if (message.pay_load_length > 0)
-                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
+                    recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("?\n");
                 // Send it using exactly the same syscalls as for other file descriptors
-                message.header.type_digit = 0xf;
-                unsigned char header = transform_header(message);
-                uint64_t pay_length = 0;
-                write(data->socket_fd, &header, sizeof(header));
-                write(data->socket_fd, &pay_length, sizeof(pay_length));
+                send_error_message(data);
                 close(data->socket_fd);
                 break;
             }
