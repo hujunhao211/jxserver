@@ -29,7 +29,7 @@
 
 typedef struct node{
     struct node* next;
-    struct connect_data* connect_date;
+    struct connect_data* connect_data;
 }node_t;
 
 typedef struct linked_queue{
@@ -103,7 +103,7 @@ typedef struct session{
 
 void enqueue(linked_queue_t *queue, struct connect_data* data){
     node_t *newnode = malloc(sizeof(node_t));
-    newnode->connect_date = data;
+    newnode->connect_data = data;
     newnode->next = NULL;
     if (queue->tail == NULL){
         queue->head = newnode;
@@ -124,7 +124,7 @@ struct connect_data* dequeue(linked_queue_t *queue){
     if (queue->head == NULL){
         return NULL;
     } else{
-        struct connect_data *result = queue->head->connect_date;
+        struct connect_data *result = queue->head->connect_data;
         node_t *temp = queue->head;
         queue->head = queue->head->next;
         if (queue->head == NULL) {
