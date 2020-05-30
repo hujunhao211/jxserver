@@ -1012,6 +1012,9 @@ void free_queue(linked_queue_t *queue){
     free(queue->session->session_ids);
     pthread_mutex_destroy(&(queue->session->lock));
     free(queue->session);
+    free(queue->archive->session_ids);
+    pthread_mutex_destroy(&(queue->archive->lock));
+    free(queue->archive);
     free(queue->com_dict->len);
     free(queue->com_dict);
     free(queue);
