@@ -741,6 +741,7 @@ void *connection_handler(void *argv){
                                         fclose(fp);
                                         remove_session_id(data->queue->archive,data->queue->session, session_id, offset, offset_length, file_name);
                                     } else{
+                                        
 //                                        printf("should not in1\n");
                                         unsigned char header = {0x70};
                                         write(data->socket_fd, &header, 1);
