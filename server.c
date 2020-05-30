@@ -371,8 +371,6 @@ int find_archive(session_t* session, uint32_t id,uint64_t offset, uint64_t lengt
 
 }
 
-
-
 void remove_session_id(session_t* archive,session_t* session, uint32_t id,uint64_t offset, uint64_t length, char * file_name){
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
@@ -441,6 +439,9 @@ void send_echo_back(message_t *message,struct connect_data *data,uint64_t v){
     write(data->socket_fd, &v, 8);
     write(data->socket_fd, message->pay_load, message->pay_load_length);
 }
+
+
+
 void echo_message(message_t* message,struct connect_data* data,uint64_t v){
     if (message->pay_load_length > 0)
         recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
@@ -537,7 +538,6 @@ void *connection_handler(void *argv){
                             for(int i = 7;i >= 0;i--){
                                 send(data->socket_fd, &(hexBuffer[i]),1,0);
                             }
-                                // send back file name
                             send(data->socket_fd, (void*)(respone), pay_load_length, 0);
                         } else{
                             int number_bit = 0;
@@ -554,7 +554,6 @@ void *connection_handler(void *argv){
                             compression_message = realloc(compression_message, ++compress_length);
                             compression_message[compress_length - 1] = gap;
                             message.pay_load_length = compress_length;
-                            //                        printf("comprerss_length: %lu\n",message.pay_load_length);
                             message.pay_load = compression_message;
                             message.header.type_digit = 0x3;
                             message.header.compression_bit = 1;
@@ -637,17 +636,7 @@ void *connection_handler(void *argv){
                         unsigned char* pay_load = (unsigned char*)&file_size;
                         for (int i  = 0; i  < 8; i++) {
                             int c = pay_load[i];
-                            int index = data->queue->com_dict->len[c];
-                            for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
-                                if (number_bit == compress_length * 8){
-                                    compression_message = realloc(compression_message, ++compress_length);
-                                }
-                                if (get_bit(data->queue->com_dict->dict, j) == 1){
-                                    set_bit(compression_message, number_bit++);
-                                } else{
-                                    clear_bit(compression_message, number_bit++);
-                                }
-                            }
+                            compressed(data, &compression_message, c, &number_bit, &compress_length);
                         }
                         char gap = abs(number_bit - compress_length * 8);
                         for (int i = number_bit; i  < compress_length * 8; i++) {
@@ -910,9 +899,6 @@ void *connection_handler(void *argv){
             }
     //        write(data->socket_fd, message.pay_load, message.pay_load_length);
             free(message.pay_load);
-        //    puts(buffer->header);
-    //        write(data->socket_fd, data->msg, data->msg_len);
-    //        printf("w\n");
             
         }
     }
