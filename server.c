@@ -545,17 +545,7 @@ void *connection_handler(void *argv){
                             unsigned char *compression_message = malloc(1);
                             for (int i = 0; i < pay_load_length; i++){
                                 int c = respone[i];
-                                int index = data->queue->com_dict->len[c];
-                                for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
-                                    if (number_bit == compress_length * 8){
-                                        compression_message = realloc(compression_message, ++compress_length);
-                                    }
-                                    if (get_bit(data->queue->com_dict->dict, j) == 1){
-                                        set_bit(compression_message, number_bit++);
-                                    } else{
-                                        clear_bit(compression_message, number_bit++);
-                                    }
-                                }
+                                compressed(data, &compression_message, c, &number_bit, &compress_length);
                             }
                             char gap = abs(number_bit - compress_length * 8);
                             for (int i = number_bit; i  < compress_length * 8; i++) {
