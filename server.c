@@ -429,9 +429,13 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
     return file_name;
 }
 
-//void send_echo_without_compression(){
-//
-//}
+void send_echo_back(message_t *message,struct connect_data *data,uint64_t v){
+    message->header.require_bit = 0;
+    unsigned char header = transform_header(*message);
+    write(data->socket_fd, &header, sizeof(header));
+    write(data->socket_fd, &v, 8);
+    write(data->socket_fd, message->pay_load, message->pay_load_length);
+}
 void echo_message(message_t* message,struct connect_data* data,uint64_t v){
     if (message->pay_load_length > 0)
         recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
@@ -441,11 +445,7 @@ void echo_message(message_t* message,struct connect_data* data,uint64_t v){
     unsigned char *compression_message = malloc(1);
     if (message->header.require_bit == 1){
         if (message->header.compression_bit == 1){
-            message->header.require_bit = 0;
-            unsigned char header = transform_header(*message);
-            write(data->socket_fd, &header, sizeof(header));
-            write(data->socket_fd, &v, 8);
-            write(data->socket_fd, message->pay_load, message->pay_load_length);
+            send_echo_back(message,data ,v);
         } else{
             for (int i = 0; i < message->pay_load_length; i++) {
                 int c = message->pay_load[i];
@@ -471,21 +471,14 @@ void echo_message(message_t* message,struct connect_data* data,uint64_t v){
             }
             write(data->socket_fd, message->pay_load, message->pay_load_length);
         }
-    //                    v = htons(v);
     } else{
-        message->header.require_bit = 0;
-        unsigned char header = transform_header(*message);
-        write(data->socket_fd, &header, sizeof(header));
-        write(data->socket_fd, &v, 8);
-        write(data->socket_fd, message->pay_load, message->pay_load_length);
+        send_echo_back(message,data ,v);
     }
 }
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     if (!data->queue->shutdown_flag){
         while (1) {
-//            printf("1\n");
-//             printf("here\n");
             message_t message = {0};
             unsigned char buffer = 0;
             long number = recv(data->socket_fd, &buffer, 1, 0);
