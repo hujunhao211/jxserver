@@ -397,6 +397,16 @@ void send_error_message(struct connect_data *data){
     write(data->socket_fd, response, 9);
 }
 
+char* extract_file_information(char *file,struct connect_data*data,uint64_t *file_size){
+    char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
+    strcpy(file_name, data->queue->msg);
+    strcat(file_name, "/");
+    strcat(file_name, file);
+    struct stat stat_t;
+    stat(file_name,&stat_t);
+    *file_size = stat_t.st_size;
+    return file_name;
+}
 
 char *check(char* file,struct connect_data* data,uint64_t* file_size){
     int number = 0;
@@ -422,13 +432,7 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
         send_error_message(data);
         return NULL;
     }
-    char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
-    strcpy(file_name, data->queue->msg);
-    strcat(file_name, "/");
-    strcat(file_name, file);
-    struct stat stat_t;
-    stat(file_name,&stat_t);
-    *file_size = stat_t.st_size;
+    char *file_name = extract_file_information(file, data,file_size);
     return file_name;
 }
 
@@ -597,20 +601,14 @@ void *connection_handler(void *argv){
                 if (found == 0){
                     send_error_message(data);
                 } else{
+                    uint64_t file_size = 0;
+                    char *file_name = extract_file_information(file, data,&file_size);
                     if (message.header.require_bit == 0){
                         uint8_t header = {0x50};
                         write(data->socket_fd, &header, sizeof(header));
                         uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
                         write(data->socket_fd, &pay_load_len, 8);
 //                        printf("directory name: %s\n",data->queue->msg);
-                        char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
-                        strcpy(file_name, data->queue->msg);
-                        strcat(file_name, "/");
-                        strcat(file_name, file);
-                        struct stat stat_t;
-                        stat(file_name,&stat_t);
-                        uint64_t file_size = stat_t.st_size;
-                        free(file_name);
                         unsigned char* pay_load = (unsigned char*)&file_size;
                         for (int i = 7; i >= 0; i--) {
                             write(data->socket_fd, &(pay_load[i]), 1);
@@ -621,14 +619,6 @@ void *connection_handler(void *argv){
                         message.header.require_bit = 0;
                         unsigned char header = transform_header(message);
                         write(data->socket_fd, &header, sizeof(header));
-                        char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
-                        strcpy(file_name, data->queue->msg);
-                        strcat(file_name, "/");
-                        strcat(file_name, file);
-                        struct stat stat_t;
-                        stat(file_name,&stat_t);
-                        uint64_t file_size = stat_t.st_size;
-                        free(file_name);
                         int number_bit = 0;
                         int compress_length = 1;
                         unsigned char *compression_message = malloc(1);
@@ -653,6 +643,7 @@ void *connection_handler(void *argv){
                         }
                         write(data->socket_fd, message.pay_load, message.pay_load_length);
                     }
+                    free(file_name);
                 }
             } else if(message.header.type_digit == 6){
                 if (message.header.compression_bit == 0){
