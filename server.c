@@ -716,16 +716,11 @@ void *connection_handler(void *argv){
                                     write(data->socket_fd, &old_offset_length, 8);
                                     write(data->socket_fd, file_content, offset_length);
                                     fclose(fp);
-                                    remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
+//                                    remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
                                 } else{
 //                                    printf("multiplex is 1\n");
-                                    unsigned char header = {0x70};
-                                    write(data->socket_fd, &header, 1);
-                                    uint64_t pay_length = 0;
-                                    unsigned char*result = (unsigned char *)&pay_length;
-                                    for(int i = 7;  i >= 0; i--){
-                                        write(data->socket_fd, &result[i], 1);
-                                    }
+                                    uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
+                                    write(data->socket_fd, response, 9);
                                 }
                             } else{
                                 int number_bit = 0;
