@@ -717,7 +717,6 @@ void *connection_handler(void *argv){
                                     write(data->socket_fd, file_content, offset_length);
                                     fclose(fp);
 //                                    remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
-                                    
                                 } else{
 //                                    printf("multiplex is 1\n");
                                     uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
