@@ -430,10 +430,10 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
 }
 
 
-void echo_message(message_t message,struct connect_data* data,uint64_t v){
+void echo_message(message_t* message_p,struct connect_data* data,uint64_t v){
+    message_t message = *message_p;
     if (message.pay_load_length > 0)
         recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-    //                printf("here echo\n");
     message.header.type_digit = 0x1;
     int number_bit = 0;
     int compress_length = 1;
@@ -521,7 +521,7 @@ void *connection_handler(void *argv){
     //        printf("type_digit: %x\n",(int)message.header.type_digit);
     //        printf("%x\n",message.pay_load_length);
             if(message.header.type_digit == 0x00){
-                echo_message(message, data, v);
+                echo_message(&message, data, v);
             } else if(message.header.type_digit == 2){
                 if (message.pay_load_length > 0)
                 recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
