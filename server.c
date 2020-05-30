@@ -298,6 +298,13 @@ compress_dict_t* build_compression(){
     compress->tree = tree;
     compress->dict = dict;
     compress->len = len;
+//    for (i = 0; i < 256; i++){
+//        for (int j = compress->len[i]; j < compress->len[i+1]; j++){
+//            printf("%d", get_bit(compress->dict, j));
+//        }
+//        printf("\n");
+//    }
+//    printf("here\n");
     return compress;
 }
 void free_tree(tree_node_t *root){
@@ -442,7 +449,7 @@ void echo_message(message_t* message,struct connect_data* data,uint64_t v){
         } else{
             for (int i = 0; i < message->pay_load_length; i++) {
                 int c = message->pay_load[i];
-                compressed(data, &compression_message, c, number_bit, compress_length);
+                compressed(data, &compression_message, c, &number_bit, &compress_length);
             }
             char gap = abs(number_bit - compress_length * 8);
             for (int i = number_bit; i  < compress_length * 8; i++) {
