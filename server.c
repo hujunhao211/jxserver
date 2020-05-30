@@ -335,7 +335,6 @@ void compressed(struct connect_data* data,uint8_t ** compression_message,int c,i
     }
 }
 
-
 int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
     int find = 0;
     pthread_mutex_lock(&(session->lock));
