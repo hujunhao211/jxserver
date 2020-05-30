@@ -298,13 +298,6 @@ compress_dict_t* build_compression(){
     compress->tree = tree;
     compress->dict = dict;
     compress->len = len;
-//    for (i = 0; i < 256; i++){
-//        for (int j = compress->len[i]; j < compress->len[i+1]; j++){
-//            printf("%d", get_bit(compress->dict, j));
-//        }
-//        printf("\n");
-//    }
-//    printf("here\n");
     return compress;
 }
 void free_tree(tree_node_t *root){
