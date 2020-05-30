@@ -348,7 +348,7 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
-        session->session_ids[session->size - 1].file_name = file_name;
+        session->session_ids[session->size - 1].file_name = strdup(file_name);
         session->session_ids[session->size - 1].offset = offset;
         session->session_ids[session->size - 1].length = length;
     }
