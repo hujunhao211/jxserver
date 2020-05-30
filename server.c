@@ -726,7 +726,7 @@ void *connection_handler(void *argv){
                                 if (!find_archive(data->queue->archive, session_id, offset, offset_length, file_name)){
                                     int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                                     if (!multiplex){
-                                        printf("should in\n");
+//                                        printf("should in\n");
                                         unsigned char header = {0x70};
                                         write(data->socket_fd, &header, 1);
                                         uint64_t pay_length = offset_length + 20;
@@ -741,7 +741,7 @@ void *connection_handler(void *argv){
                                         fclose(fp);
                                         remove_session_id(data->queue->archive,data->queue->session, session_id, offset, offset_length, file_name);
                                     } else{
-                                        printf("should not in1\n");
+//                                        printf("should not in1\n");
                                         unsigned char header = {0x70};
                                         write(data->socket_fd, &header, 1);
                                         uint64_t pay_length = 0;
@@ -751,7 +751,7 @@ void *connection_handler(void *argv){
                                         }
                                     }
                                 } else {
-                                    printf("should not in2\n");
+//                                    printf("should not in2\n");
                                     uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                                     write(data->socket_fd, response, 9);
                                 }
