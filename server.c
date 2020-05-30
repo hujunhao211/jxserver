@@ -41,6 +41,7 @@ typedef struct linked_queue{
     char *msg;
     struct compress_dic *com_dict;
     struct session *session;
+    struct session *archive;
 }linked_queue_t;
 
 typedef struct b_file{
@@ -335,6 +336,7 @@ void compressed(struct connect_data* data,uint8_t ** compression_message,int c,i
     }
 }
 
+
 int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
     int find = 0;
     pthread_mutex_lock(&(session->lock));
@@ -344,11 +346,10 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         }
     }
     if(!find){
-//        printf("here\n");
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
-        session->session_ids[session->size - 1].file_name = strdup(file_name);
+        session->session_ids[session->size - 1].file_name = file_name;
         session->session_ids[session->size - 1].offset = offset;
         session->session_ids[session->size - 1].length = length;
     }
@@ -356,15 +357,36 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
     return find;
 }
 
-void remove_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length, char * file_name){
+int find_archive(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
+    int find = 0;
+    pthread_mutex_lock(&(session->lock));
+    for (int i = 0; i < session->size; i++) {
+        if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(session->session_ids[i].file_name, file_name) == 0) {
+            find = 1;
+            }
+    }
+    pthread_mutex_unlock(&(session->lock));
+    return find;
+    
+
+}
+
+
+
+void remove_session_id(session_t* archive,session_t* session, uint32_t id,uint64_t offset, uint64_t length, char * file_name){
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
         if (session->session_ids[i].value == id && session->session_ids[i].offset == offset && session->session_ids[i].length && strcmp(file_name, session->session_ids[i].file_name) == 0) {
-//            printf("remove\n");
             session->session_ids[i].file_name = session->session_ids[session->size - 1].file_name;
             session->session_ids[i].length = session->session_ids[session->size - 1].length;
             session->session_ids[i].value = session->session_ids[session->size - 1].value;
             session->session_ids[i].offset = session->session_ids[session->size - 1].offset;
+            if (archive->size == archive->capacity)
+                archive->session_ids = realloc(archive->session_ids, archive->capacity * 2);
+            archive->session_ids[session->size++].value = id;
+            archive->session_ids[session->size - 1].file_name = file_name;
+            archive->session_ids[session->size - 1].offset = offset;
+            archive->session_ids[session->size - 1].length = length;
             break;
         }
     }
@@ -701,25 +723,35 @@ void *connection_handler(void *argv){
                             unsigned char* file_content = malloc(offset_length);
                             fread(file_content, offset_length, 1, fp);
                             if (message.header.require_bit == 0) {
-                                int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
-                                if (!multiplex){
-//                                    printf("multiplex is 0\n");
-                                    unsigned char header = {0x70};
-                                    write(data->socket_fd, &header, 1);
-                                    uint64_t pay_length = offset_length + 20;
-                                    unsigned char*result = (unsigned char *)&pay_length;
-                                    for(int i = 7;  i >= 0; i--){
-                                        write(data->socket_fd, &result[i], 1);
+                                if (!find_archive(data->queue->archive, session_id, offset, offset_length, file_name)){
+                                    int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
+                                    if (multiplex){
+                                        printf("should in\n");
+                                        unsigned char header = {0x70};
+                                        write(data->socket_fd, &header, 1);
+                                        uint64_t pay_length = offset_length + 20;
+                                        unsigned char*result = (unsigned char *)&pay_length;
+                                        for(int i = 7;  i >= 0; i--){
+                                            write(data->socket_fd, &result[i], 1);
+                                        }
+                                        write(data->socket_fd, &session_id , 4);
+                                        write(data->socket_fd, &old_offset, 8);
+                                        write(data->socket_fd, &old_offset_length, 8);
+                                        write(data->socket_fd, file_content, offset_length);
+                                        fclose(fp);
+                                        remove_session_id(data->queue->archive,data->queue->session, session_id, offset, offset_length, file_name);
+                                    } else{
+                                        printf("should not in1\n");
+                                        unsigned char header = {0x70};
+                                        write(data->socket_fd, &header, 1);
+                                        uint64_t pay_length = offset_length + 20;
+                                        unsigned char*result = (unsigned char *)&pay_length;
+                                        for(int i = 7;  i >= 0; i--){
+                                            write(data->socket_fd, &result[i], 1);
+                                        }
                                     }
-                                    write(data->socket_fd, &session_id , 4);
-                                    write(data->socket_fd, &old_offset, 8);
-                                    write(data->socket_fd, &old_offset_length, 8);
-                                    write(data->socket_fd, file_content, offset_length);
-                                    fclose(fp);
-//                                    remove_session_id(data->queue->session, session_id, offset, offset_length, file_name);
-                                    
-                                } else{
-//                                    printf("multiplex is 1\n");
+                                } else {
+                                    printf("should not in2\n");
                                     uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
                                     write(data->socket_fd, response, 9);
                                 }
@@ -1036,7 +1068,12 @@ int main(int argc, char** argv){
     session->session_ids = calloc(20, sizeof(session_segment_t));
     pthread_mutex_init(&(session->lock), NULL);
     queue->session = session;
-    
+    session_t *archive = malloc(sizeof(session_t));
+    archive->capacity = 20;
+    archive->size = 0;
+    archive->session_ids = calloc(20, sizeof(session_segment_t));
+    pthread_mutex_init(&(archive->lock), NULL);
+    queue->archive = archive;
     while (1) {
         if (queue->shutdown_flag)
             break;
