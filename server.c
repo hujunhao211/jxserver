@@ -349,7 +349,7 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
         if (session->size == session->capacity)
             session->session_ids = realloc(session->session_ids, session->capacity * 2);
         session->session_ids[session->size++].value = id;
-        session->session_ids[session->size - 1].file_name = file_name;
+        session->session_ids[session->size - 1].file_name = strdup(file_name);
         session->session_ids[session->size - 1].offset = offset;
         session->session_ids[session->size - 1].length = length;
     }
@@ -725,7 +725,7 @@ void *connection_handler(void *argv){
                             if (message.header.require_bit == 0) {
                                 if (!find_archive(data->queue->archive, session_id, offset, offset_length, file_name)){
                                     int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
-                                    if (multiplex){
+                                    if (!multiplex){
                                         printf("should in\n");
                                         unsigned char header = {0x70};
                                         write(data->socket_fd, &header, 1);
