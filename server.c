@@ -408,7 +408,7 @@ char* extract_file_information(char *file,struct connect_data*data,uint64_t *fil
     return file_name;
 }
 
-char *check(char* file,struct connect_data* data,uint64_t* file_size){
+int check_file_in_dir(char* file,struct connect_data* data){
     int number = 0;
     char** files = malloc(1);
     DIR *dir;
@@ -428,6 +428,11 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
             break;
         }
     }
+    return found;
+}
+
+char *check(char* file,struct connect_data* data,uint64_t* file_size){
+    int found = check_file_in_dir(file, data);
     if (found == 0){
         send_error_message(data);
         return NULL;
