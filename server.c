@@ -512,11 +512,8 @@ void direct_list(message_t* message,struct connect_data* data){
             if (message->header.require_bit == 0){
                 uint8_t response_header = 0x30;
                 send(data->socket_fd, &response_header, 1, 0);
-                unsigned char hexBuffer[100]={0};
-                memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
-                for(int i = 7;i >= 0;i--){
-                    send(data->socket_fd, &(hexBuffer[i]),1,0);
-                }
+                pay_load_length = (int)swap_uint64((int)pay_load_length);
+                write(data->socket_fd, &pay_load_length, sizeof(pay_load_length));
                 send(data->socket_fd, (void*)(respone), pay_load_length, 0);
             } else{
                 int number_bit = 0;
@@ -612,7 +609,6 @@ void *connection_handler(void *argv){
                         write(data->socket_fd, &header, sizeof(header));
                         uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
                         write(data->socket_fd, &pay_load_len, 8);
-//                        printf("directory name: %s\n",data->queue->msg);
                         unsigned char* pay_load = (unsigned char*)&file_size;
                         for (int i = 7; i >= 0; i--) {
                             write(data->socket_fd, &(pay_load[i]), 1);
@@ -886,8 +882,6 @@ void *connection_handler(void *argv){
             } else {
                 if (message.pay_load_length > 0)
                     recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-//                printf("?\n");
-                // Send it using exactly the same syscalls as for other file descriptors
                 send_error_message(data);
                 close(data->socket_fd);
                 break;
