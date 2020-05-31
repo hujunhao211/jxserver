@@ -485,6 +485,71 @@ void echo_message(message_t* message,struct connect_data* data,uint64_t v){
         send_echo_back(message,data ,v);
     }
 }
+
+void direct_list(message_t* message,struct connect_data* data){
+    if (message->pay_load_length > 0)
+        recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
+    //                printf("2\n");
+    DIR* dir;
+    struct dirent* ent;
+    int pay_load_length = 0;
+    char *respone = calloc(100, sizeof(char));
+    //                printf("msg:    is     %s\n",data->queue->msg);
+    if (message->header.compression_bit == 0){
+        if ((dir = opendir(data->queue->msg)) != NULL){
+            while ((ent = readdir(dir)) != NULL) {
+                if (ent->d_type == 8) {
+                    for (int k = 0; k < strlen(ent->d_name); k++) {
+                        respone[pay_load_length + k] = ent->d_name[k];
+                    }
+                    pay_load_length += (strlen(ent->d_name) + 1);
+                    respone[pay_load_length - 1] = 0x00;
+                }
+            }
+            closedir(dir);
+            respone[pay_load_length - 1] = 0x00;
+            respone = realloc(respone, pay_load_length);
+            if (message->header.require_bit == 0){
+                uint8_t response_header = 0x30;
+                send(data->socket_fd, &response_header, 1, 0);
+                unsigned char hexBuffer[100]={0};
+                memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
+                for(int i = 7;i >= 0;i--){
+                    send(data->socket_fd, &(hexBuffer[i]),1,0);
+                }
+                send(data->socket_fd, (void*)(respone), pay_load_length, 0);
+            } else{
+                int number_bit = 0;
+                int compress_length = 1;
+                unsigned char *compression_message = malloc(1);
+                for (int i = 0; i < pay_load_length; i++){
+                    int c = respone[i];
+                        compressed(data, &compression_message, c, &number_bit, &compress_length);
+                    }
+                char gap = abs(number_bit - compress_length * 8);
+                for (int i = number_bit; i  < compress_length * 8; i++) {
+                    clear_bit(compression_message, i);
+                }
+                compression_message = realloc(compression_message, ++compress_length);
+                compression_message[compress_length - 1] = gap;
+                message->pay_load_length = compress_length;
+                message->pay_load = compression_message;
+                message->header.type_digit = 0x3;
+                message->header.compression_bit = 1;
+                message->header.require_bit = 0;
+                unsigned char header = transform_header(*message);
+                write(data->socket_fd, &header, sizeof(header));
+                unsigned char hexBuffer[100] = {0};
+                memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
+                for (int i = 7; i >= 0; i--) {
+                    send(data->socket_fd,&(hexBuffer[i]),1,0);
+                }
+                write(data->socket_fd, message->pay_load, message->pay_load_length);
+            }
+        }
+    }
+    free(respone);
+}
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     if (!data->queue->shutdown_flag){
@@ -512,68 +577,7 @@ void *connection_handler(void *argv){
             if(message.header.type_digit == 0x00){
                 echo_message(&message, data, v);
             } else if(message.header.type_digit == 2){
-                if (message.pay_load_length > 0)
-                recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-//                printf("2\n");
-                DIR* dir;
-                struct dirent* ent;
-                int pay_load_length = 0;
-                char *respone = calloc(100, sizeof(char));
-//                printf("msg:    is     %s\n",data->queue->msg);
-                if (message.header.compression_bit == 0){
-                    if ((dir = opendir(data->queue->msg)) != NULL){
-                        while ((ent = readdir(dir)) != NULL) {
-                            if (ent->d_type == 8) {
-                                for (int k = 0; k < strlen(ent->d_name); k++) {
-                                    respone[pay_load_length + k] = ent->d_name[k];
-                                }
-                                pay_load_length += (strlen(ent->d_name) + 1);
-                                respone[pay_load_length - 1] = 0x00;
-                            }
-                        }
-                        closedir(dir);
-                        respone[pay_load_length - 1] = 0x00;
-                        respone = realloc(respone, pay_load_length);
-                        if (message.header.require_bit == 0){
-                            uint8_t response_header = 0x30;
-                            send(data->socket_fd, &response_header, 1, 0);
-                            unsigned char hexBuffer[100]={0};
-                            memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
-                            for(int i = 7;i >= 0;i--){
-                                send(data->socket_fd, &(hexBuffer[i]),1,0);
-                            }
-                            send(data->socket_fd, (void*)(respone), pay_load_length, 0);
-                        } else{
-                            int number_bit = 0;
-                            int compress_length = 1;
-                            unsigned char *compression_message = malloc(1);
-                            for (int i = 0; i < pay_load_length; i++){
-                                int c = respone[i];
-                                compressed(data, &compression_message, c, &number_bit, &compress_length);
-                            }
-                            char gap = abs(number_bit - compress_length * 8);
-                            for (int i = number_bit; i  < compress_length * 8; i++) {
-                                clear_bit(compression_message, i);
-                            }
-                            compression_message = realloc(compression_message, ++compress_length);
-                            compression_message[compress_length - 1] = gap;
-                            message.pay_load_length = compress_length;
-                            message.pay_load = compression_message;
-                            message.header.type_digit = 0x3;
-                            message.header.compression_bit = 1;
-                            message.header.require_bit = 0;
-                            unsigned char header = transform_header(message);
-                            write(data->socket_fd, &header, sizeof(header));
-                            unsigned char hexBuffer[100] = {0};
-                            memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
-                            for (int i = 7; i >= 0; i--) {
-                                send(data->socket_fd,&(hexBuffer[i]),1,0);
-                            }
-                            write(data->socket_fd, message.pay_load, message.pay_load_length);
-                        }
-                    }
-                }
-                free(respone);
+                direct_list(&message, data);
             } else if(message.header.type_digit == 4){
                 if (message.pay_load_length > 0)
                     recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
