@@ -549,7 +549,6 @@ void direct_list(message_t* message,struct connect_data* data){
             }
         }
     }
-    free(respone);
 }
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
