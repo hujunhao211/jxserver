@@ -535,8 +535,8 @@ void direct_list(message_t* message,struct connect_data* data){
                 message->header.require_bit = 0;
                 unsigned char header = transform_header(*message);
                 write(data->socket_fd, &header, sizeof(header));
-                unsigned char hexBuffer[100] = {0};
             }
+            unsigned char hexBuffer[100] = {0};
             memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
             for (int i = 7; i >= 0; i--) {
                 write(data->socket_fd,&(hexBuffer[i]),1);
