@@ -545,6 +545,78 @@ void direct_list(message_t* message,struct connect_data* data){
         }
     }
 }
+
+void file_size_query(message_t* message, struct connect_data*data){
+    if (message->pay_load_length > 0)
+        recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
+    //                printf("4\n");
+    char *file = (char*)message->pay_load;
+    int number = 0;
+    char** files = malloc(1);
+    DIR *dir;
+    struct dirent* ent;
+    if ((dir = opendir(data->queue->msg)) != NULL){
+        while ((ent = readdir(dir)) != NULL) {
+            if (ent->d_type == DT_REG){
+                files = realloc(files, (++number) * sizeof(char*));
+                files[number - 1] = ent->d_name;
+            }
+        }
+    }
+    int found = 0;
+    for (int i = 0; i < number; i++) {
+        if (strcmp(files[i],file) == 0){
+            found = 1;
+            break;
+        }
+    }
+    if (found == 0){
+        send_error_message(data);
+    } else{
+        uint64_t file_size = 0;
+        char *file_name = extract_file_information(file, data,&file_size);
+        if (message->header.require_bit == 0){
+            uint8_t header = {0x50};
+            write(data->socket_fd, &header, sizeof(header));
+            uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
+            write(data->socket_fd, &pay_load_len, 8);
+            unsigned char* pay_load = (unsigned char*)&file_size;
+            for (int i = 7; i >= 0; i--) {
+                write(data->socket_fd, &(pay_load[i]), 1);
+            }
+        } else{
+            message->header.type_digit = 0x5;
+            message->header.compression_bit = 1;
+            message->header.require_bit = 0;
+            unsigned char header = transform_header(*message);
+            write(data->socket_fd, &header, sizeof(header));
+            int number_bit = 0;
+            int compress_length = 1;
+            unsigned char *compression_message = malloc(1);
+            file_size = swap_uint64(file_size);
+            unsigned char* pay_load = (unsigned char*)&file_size;
+            for (int i  = 0; i  < 8; i++) {
+                int c = pay_load[i];
+                compressed(data, &compression_message, c, &number_bit, &compress_length);
+            }
+            char gap = abs(number_bit - compress_length * 8);
+            for (int i = number_bit; i  < compress_length * 8; i++) {
+                clear_bit(compression_message, i);
+            }
+            compression_message = realloc(compression_message, ++compress_length);
+            compression_message[compress_length - 1] = gap;
+            message->pay_load_length = compress_length;
+            unsigned char hexBuffer[100] = {0};
+            memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
+            message->pay_load = compression_message;
+            for (int i = 7; i >= 0; i--) {
+                send(data->socket_fd,&(hexBuffer[i]),1,0);
+            }
+            write(data->socket_fd, message->pay_load, message->pay_load_length);
+        }
+        free(file_name);
+    }
+}
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
     if (!data->queue->shutdown_flag){
@@ -574,75 +646,7 @@ void *connection_handler(void *argv){
             } else if(message.header.type_digit == 2){
                 direct_list(&message, data);
             } else if(message.header.type_digit == 4){
-                if (message.pay_load_length > 0)
-                    recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
-//                printf("4\n");
-                char *file = (char*)message.pay_load;
-                int number = 0;
-                char** files = malloc(1);
-                DIR *dir;
-                struct dirent* ent;
-                if ((dir = opendir(data->queue->msg)) != NULL){
-                    while ((ent = readdir(dir)) != NULL) {
-                        if (ent->d_type == DT_REG){
-                            files = realloc(files, (++number) * sizeof(char*));
-                            files[number - 1] = ent->d_name;
-                        }
-                    }
-                }
-                int found = 0;
-                for (int i = 0; i < number; i++) {
-                    if (strcmp(files[i],file) == 0){
-                        found = 1;
-                        break;
-                    }
-                }
-                if (found == 0){
-                    send_error_message(data);
-                } else{
-                    uint64_t file_size = 0;
-                    char *file_name = extract_file_information(file, data,&file_size);
-                    if (message.header.require_bit == 0){
-                        uint8_t header = {0x50};
-                        write(data->socket_fd, &header, sizeof(header));
-                        uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
-                        write(data->socket_fd, &pay_load_len, 8);
-                        unsigned char* pay_load = (unsigned char*)&file_size;
-                        for (int i = 7; i >= 0; i--) {
-                            write(data->socket_fd, &(pay_load[i]), 1);
-                        }
-                    } else{
-                        message.header.type_digit = 0x5;
-                        message.header.compression_bit = 1;
-                        message.header.require_bit = 0;
-                        unsigned char header = transform_header(message);
-                        write(data->socket_fd, &header, sizeof(header));
-                        int number_bit = 0;
-                        int compress_length = 1;
-                        unsigned char *compression_message = malloc(1);
-                        file_size = swap_uint64(file_size);
-                        unsigned char* pay_load = (unsigned char*)&file_size;
-                        for (int i  = 0; i  < 8; i++) {
-                            int c = pay_load[i];
-                            compressed(data, &compression_message, c, &number_bit, &compress_length);
-                        }
-                        char gap = abs(number_bit - compress_length * 8);
-                        for (int i = number_bit; i  < compress_length * 8; i++) {
-                            clear_bit(compression_message, i);
-                        }
-                        compression_message = realloc(compression_message, ++compress_length);
-                        compression_message[compress_length - 1] = gap;
-                        message.pay_load_length = compress_length;
-                        unsigned char hexBuffer[100] = {0};
-                        memcpy((char*)hexBuffer, (char*)&message.pay_load_length,sizeof(int));
-                        message.pay_load = compression_message;
-                        for (int i = 7; i >= 0; i--) {
-                            send(data->socket_fd,&(hexBuffer[i]),1,0);
-                        }
-                        write(data->socket_fd, message.pay_load, message.pay_load_length);
-                    }
-                    free(file_name);
-                }
+                file_size_query(&message, data);
             } else if(message.header.type_digit == 6){
                 if (message.header.compression_bit == 0){
                     char *file_name;
