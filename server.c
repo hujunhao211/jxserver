@@ -493,7 +493,7 @@ void direct_list(message_t* message,struct connect_data* data){
     DIR* dir;
     struct dirent* ent;
     int pay_load_length = 0;
-    char *respone = calloc(100, sizeof(char));
+    unsigned char *respone = calloc(100, sizeof(char));
     //                printf("msg:    is     %s\n",data->queue->msg);
     if (message->header.compression_bit == 0){
         if ((dir = opendir(data->queue->msg)) != NULL){
@@ -512,9 +512,13 @@ void direct_list(message_t* message,struct connect_data* data){
             if (message->header.require_bit == 0){
                 uint8_t response_header = 0x30;
                 send(data->socket_fd, &response_header, 1, 0);
-                pay_load_length = (int)swap_uint64((int)pay_load_length);
-                write(data->socket_fd, &pay_load_length, sizeof(pay_load_length));
-                send(data->socket_fd, (void*)(respone), pay_load_length, 0);
+                unsigned char hexBuffer[100]={0};
+                memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
+                for(int i = 7;i >= 0;i--){
+                    write(data->socket_fd, &(hexBuffer[i]),1);
+                }
+                message->pay_load = respone;
+                send(data->socket_fd, message->pay_load, pay_load_length, 0);
             } else{
                 int number_bit = 0;
                 int compress_length = 1;
