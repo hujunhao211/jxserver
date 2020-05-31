@@ -512,13 +512,8 @@ void direct_list(message_t* message,struct connect_data* data){
             if (message->header.require_bit == 0){
                 uint8_t response_header = 0x30;
                 send(data->socket_fd, &response_header, 1, 0);
-                unsigned char hexBuffer[100]={0};
-                memcpy((char*)hexBuffer,(char*)&pay_load_length,sizeof(int));
-                for(int i = 7;i >= 0;i--){
-                    write(data->socket_fd, &(hexBuffer[i]),1);
-                }
+                message->pay_load_length = pay_load_length;
                 message->pay_load = respone;
-                send(data->socket_fd, message->pay_load, pay_load_length, 0);
             } else{
                 int number_bit = 0;
                 int compress_length = 1;
@@ -541,12 +536,12 @@ void direct_list(message_t* message,struct connect_data* data){
                 unsigned char header = transform_header(*message);
                 write(data->socket_fd, &header, sizeof(header));
                 unsigned char hexBuffer[100] = {0};
-                memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
-                for (int i = 7; i >= 0; i--) {
-                    send(data->socket_fd,&(hexBuffer[i]),1,0);
-                }
-                write(data->socket_fd, message->pay_load, message->pay_load_length);
             }
+            memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
+            for (int i = 7; i >= 0; i--) {
+                write(data->socket_fd,&(hexBuffer[i]),1);
+            }
+            write(data->socket_fd, message->pay_load, message->pay_load_length);
         }
     }
 }
