@@ -718,8 +718,6 @@ void retrieve_file(message_t* message,struct connect_data* data){
         } else{
             if (message->pay_load_length > 0)
                 recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
-    //                    printf("4\n");
-    //                    printf("%llu\n",message.pay_load_length);
                 char *decompression_array = malloc(1);
                 int size = 0;
                 uint64_t length = (message->pay_load[message->pay_load_length - 1]);
@@ -743,95 +741,90 @@ void retrieve_file(message_t* message,struct connect_data* data){
                             }
                         }
                     }
-                    uint32_t session_id = 0;
-                    char * target_file = strdup(decompression_array + 20);
+                uint32_t session_id = 0;
+                char * target_file = strdup(decompression_array + 20);
     //                    printf("%s\n",target_file);
-                    memcpy(&session_id, decompression_array, 4);
-                    uint64_t offset = parse((unsigned char*)&decompression_array[4]);
-                    uint64_t offset_length = parse((unsigned char*)&decompression_array[12]);
+                memcpy(&session_id, decompression_array, 4);
+                uint64_t offset = parse((unsigned char*)&decompression_array[4]);
+                uint64_t offset_length = parse((unsigned char*)&decompression_array[12]);
     //                    printf("%lu\n",(long)offset);
     //                    printf("%lu\n",(long)offset_length);
-                    uint64_t file_size = 0;
-                    char *file_path = check(target_file, data, &file_size);
-                    if (file_path != NULL){
-                        uint64_t range = offset + offset_length;
-                        if (range > file_size){
-                            send_error_message(data);
-                        } else{
-                            if (message->header.require_bit == 0){
-                                FILE *fp = fopen(file_path, "r");
-                                fseek(fp, offset, SEEK_SET);
-                                unsigned char* file_content = malloc(offset_length);
-                                fread(file_content, offset_length, 1, fp);
-                                uint8_t header = {0x70};
-                                write(data->socket_fd, &header, 1);
-                                uint64_t pay_load_length = offset_length + 20;
-                                unsigned char* result = (unsigned char *)&pay_load_length;
-                                for (int i = 7; i >= 0; i--) {
-                                    write(data->socket_fd, &result[i], 1);
-                                }
-                                uint64_t new_offset = swap_uint64(offset);
-                                uint64_t new_offset_length = swap_uint64(offset_length);
-                                write(data->socket_fd, &session_id, 4);
-                                write(data->socket_fd, &(new_offset), 8);
-                                write(data->socket_fd, &(new_offset_length), 8);
-                                write(data->socket_fd, file_content, offset_length);
-                            } else{
-                                FILE *fp = fopen(file_path, "r");
-                                fseek(fp, offset, SEEK_SET);
-                                unsigned char* file_content = malloc(offset_length);
-                                fread(file_content, offset_length, 1, fp);
-                                unsigned char* session = (unsigned char*)&session_id;
-                                int number_bit = 0;
-                                int compress_length = 1;
-                                unsigned char *compression_message = malloc(1);
-                                uint64_t new_offset = swap_uint64(offset);
-                                uint64_t new_offset_length = swap_uint64(offset_length);
-                                for (int i = 0; i < 4; i++) {
-                                    int c = session[i];
-                                    compressed(data, &compression_message, c, &number_bit, &compress_length);
-                                }
-                                unsigned char* compress_offset = (unsigned char*)&new_offset;
-                                for (int i = 0; i < 8; i++) {
-                                    int c = compress_offset[i];
-                                    compressed(data, &compression_message, c, &number_bit, &compress_length);
-                                }
-                                unsigned char* compress_offset_length = (unsigned char*)&new_offset_length;
-                                for (int i = 0; i < 8; i++) {
-                                    int c = compress_offset_length[i];
-                                    compressed(data, &compression_message, c, &number_bit, &compress_length);
-                                }
-                                for (int i = 0; i < offset_length; i++) {
-                                    int c = file_content[i];
-                                    compressed(data, &compression_message, c, &number_bit, &compress_length);
-                                }
-                                char gap = abs(number_bit - compress_length * 8);
-                                for (int i = number_bit; i  < compress_length * 8; i++) {
-                                    clear_bit(compression_message, i);
-                                }
-                                compression_message = realloc(compression_message, ++compress_length);
-                                compression_message[compress_length - 1] = gap;
-                                message->header.type_digit = 0x7;
-                                message->header.compression_bit = 1;
-                                message->header.require_bit = 0;
-                                unsigned char header = transform_header(*message);
-                                write(data->socket_fd, &header, sizeof(header));
-                                message->pay_load_length = compress_length;
-                                unsigned char hexBuffer[100] = {0};
-                                memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
-                                message->pay_load = compression_message;
-                                for (int i = 7; i >= 0; i--) {
-                                    send(data->socket_fd,&(hexBuffer[i]),1,0);
-                                }
-                                write(data->socket_fd, message->pay_load, message->pay_load_length);
+                uint64_t file_size = 0;
+                char *file_path = check(target_file, data, &file_size);
+                if (file_path != NULL){
+                    uint64_t range = offset + offset_length;
+                    if (range > file_size){
+                        send_error_message(data);
+                    } else{
+                        FILE *fp = fopen(file_path, "r");
+                        fseek(fp, offset, SEEK_SET);
+                        unsigned char* file_content = malloc(offset_length);
+                        fread(file_content, offset_length, 1, fp);
+                        if (message->header.require_bit == 0){
+                            uint8_t header = {0x70};
+                            write(data->socket_fd, &header, 1);
+                            uint64_t pay_load_length = offset_length + 20;
+                            unsigned char* result = (unsigned char *)&pay_load_length;
+                            for (int i = 7; i >= 0; i--) {
+                                write(data->socket_fd, &result[i], 1);
                             }
+                            uint64_t new_offset = swap_uint64(offset);
+                            uint64_t new_offset_length = swap_uint64(offset_length);
+                            write(data->socket_fd, &session_id, 4);
+                            write(data->socket_fd, &(new_offset), 8);
+                            write(data->socket_fd, &(new_offset_length), 8);
+                            write(data->socket_fd, file_content, offset_length);
+                        } else{
+                            unsigned char* session = (unsigned char*)&session_id;
+                            int number_bit = 0;
+                            int compress_length = 1;
+                            unsigned char *compression_message = malloc(1);
+                            uint64_t new_offset = swap_uint64(offset);
+                            uint64_t new_offset_length = swap_uint64(offset_length);
+                            for (int i = 0; i < 4; i++) {
+                                int c = session[i];
+                                compressed(data, &compression_message, c, &number_bit, &compress_length);
+                            }
+                            unsigned char* compress_offset = (unsigned char*)&new_offset;
+                            for (int i = 0; i < 8; i++) {
+                                int c = compress_offset[i];
+                                compressed(data, &compression_message, c, &number_bit, &compress_length);
+                            }
+                            unsigned char* compress_offset_length = (unsigned char*)&new_offset_length;
+                            for (int i = 0; i < 8; i++) {
+                                int c = compress_offset_length[i];
+                                compressed(data, &compression_message, c, &number_bit, &compress_length);
+                            }
+                            for (int i = 0; i < offset_length; i++) {
+                                int c = file_content[i];
+                                compressed(data, &compression_message, c, &number_bit, &compress_length);
+                            }
+                            char gap = abs(number_bit - compress_length * 8);
+                            for (int i = number_bit; i  < compress_length * 8; i++) {
+                                clear_bit(compression_message, i);
+                            }
+                            compression_message = realloc(compression_message, ++compress_length);
+                            compression_message[compress_length - 1] = gap;
+                            message->header.type_digit = 0x7;
+                            message->header.compression_bit = 1;
+                            message->header.require_bit = 0;
+                            unsigned char header = transform_header(*message);
+                            write(data->socket_fd, &header, sizeof(header));
+                            message->pay_load_length = compress_length;
+                            unsigned char hexBuffer[100] = {0};
+                            memcpy((char*)hexBuffer, (char*)&message->pay_load_length,sizeof(int));
+                            message->pay_load = compression_message;
+                            for (int i = 7; i >= 0; i--) {
+                                send(data->socket_fd,&(hexBuffer[i]),1,0);
+                            }
+                            write(data->socket_fd, message->pay_load, message->pay_load_length);
                         }
-                        free(file_path);
                     }
-    //                    char * file = malloc();
+                    free(file_path);
                 }
+    //                    char * file = malloc();
+            }
     //                printf("6\n");
-                    
                     
 }
 
