@@ -556,25 +556,7 @@ void file_size_query(message_t* message, struct connect_data*data){
         recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
     //                printf("4\n");
     char *file = (char*)message->pay_load;
-    int number = 0;
-    char** files = malloc(1);
-    DIR *dir;
-    struct dirent* ent;
-    if ((dir = opendir(data->queue->msg)) != NULL){
-        while ((ent = readdir(dir)) != NULL) {
-            if (ent->d_type == DT_REG){
-                files = realloc(files, (++number) * sizeof(char*));
-                files[number - 1] = ent->d_name;
-            }
-        }
-    }
-    int found = 0;
-    for (int i = 0; i < number; i++) {
-        if (strcmp(files[i],file) == 0){
-            found = 1;
-            break;
-        }
-    }
+    int found = check_file_in_dir(file, data);
     if (found == 0){
         send_error_message(data);
     } else{
