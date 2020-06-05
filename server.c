@@ -99,7 +99,7 @@ typedef struct session{
 }session_t;
 
 
-
+// for thread pool to enqueue a work
 void enqueue(linked_queue_t *queue, struct connect_data* data){
     node_t *newnode = malloc(sizeof(node_t));
     newnode->connect_data = data;
@@ -112,13 +112,14 @@ void enqueue(linked_queue_t *queue, struct connect_data* data){
     queue->tail = newnode;
 }
 
+//change the order of the value
 uint64_t swap_uint64(uint64_t val) {
     val = ((val << 8u) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8u) & 0x00FF00FF00FF00FFULL );
     val = ((val << 16u) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16u) & 0x0000FFFF0000FFFFULL );
     return (val << 32u) | (val >> 32u);
 }
 
-
+//for thread pool to dequeue a work
 struct connect_data* dequeue(linked_queue_t *queue){
     if (queue->head == NULL){
         return NULL;
@@ -134,27 +135,28 @@ struct connect_data* dequeue(linked_queue_t *queue){
     }
 }
 
-
+//get the first byte of the header to extract typedigit
 unsigned char get_first_digit(unsigned int number){
     return number >> 4;
 }
-
+// get the five digit of the header to extract compression bit
 unsigned char get_five_digit(unsigned int number){
     number >>= 3;
     return number & 1;
 }
-
+//get the six digit of the header to extract require bit
 unsigned char get_six_digit(unsigned int number){
     number >>= 2;
     return number & 1;
 }
 
-
+//form the original header
 unsigned char transform_header(message_t message){
     unsigned char header = (message.header.type_digit << 4) | (message.header.compression_bit << 3) | (message.header.require_bit << 2);
     return header;
 }
 
+//create a node for tree
 tree_node_t *create_node(int externel){
     tree_node_t *tree_node = malloc(sizeof(tree_node_t));
     tree_node->is_external = externel;
@@ -163,7 +165,7 @@ tree_node_t *create_node(int externel){
     return tree_node;
 }
 
-
+//initialize a binary tree to store dicitonary list
 binary_tree_t *initialize_tree(){
     binary_tree_t *tree = malloc(sizeof(binary_tree_t));
     tree_node_t *node = create_node(0);
@@ -172,7 +174,7 @@ binary_tree_t *initialize_tree(){
 }
 
 
-
+// insert a node to the binary tree
 tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
     tree_node_t *cur = NULL;
     if (number){
@@ -187,7 +189,7 @@ tree_node_t* insert_node(tree_node_t *root,tree_node_t *node,char number){
     return cur;
 }
 
-
+//set a bit to 1 for bit array
 void set_bit(uint8_t* array, int index){
     int i = index/8;
     int pos = index%8;
@@ -197,7 +199,7 @@ void set_bit(uint8_t* array, int index){
     flag = flag << (8-pos-1);
     array[i] = array[i] | flag;
 }
-
+//get a bit for bit array
 uint8_t get_bit(uint8_t* array, int index){
     int i = index/8;
     int pos = index%8;
@@ -214,7 +216,7 @@ uint8_t get_bit(uint8_t* array, int index){
     // return 1 & (array[index / 8] << (index % 8));
 }
 
-
+//get value for a char array
 uint64_t parse(uint8_t *array){
     uint64_t value = array[7];
     int pos = 6;
@@ -224,7 +226,7 @@ uint64_t parse(uint8_t *array){
     }
     return value;
 }
-
+//set a bit to 0 for bit array
 void clear_bit (uint8_t *array, int index) {
     int i = index/8;
     int pos = index%8;
@@ -236,7 +238,7 @@ void clear_bit (uint8_t *array, int index) {
 
     array[i] = array[i] & flag;
 }
-
+// extract bit from the dicitonay list and build a tree
 compress_dict_t* build_compression(){
     tree_node_t *node = NULL;
     compress_dict_t *compress = malloc(sizeof(compress_dict_t));
@@ -273,11 +275,12 @@ compress_dict_t* build_compression(){
         tree_node_t* root = tree->root;
         uint8_t number = 0;
         for (int j = 0; j < temp_len; j++){
-            // printf("%d", get_bit(dict_draft, i));
+            // if the bit is the last one, we create an leaf node
             if (j == temp_len - 1){
                 node = create_node(1);
                 node->content = count;
             }
+            //otherwise, we create an internel node
             else{
                 node = create_node(0);
             }
@@ -297,15 +300,9 @@ compress_dict_t* build_compression(){
     compress->tree = tree;
     compress->dict = dict;
     compress->len = len;
-//    for (i = 0; i < 256; i++){
-//        for (int j = compress->len[i]; j < compress->len[i+1]; j++){
-//            printf("%d", get_bit(compress->dict, j));
-//        }
-//        printf("\n");
-//    }
-//    printf("here\n");
     return compress;
 }
+// free a tree
 void free_tree(tree_node_t *root){
     if (root == NULL)
         return;
@@ -320,7 +317,7 @@ void set_message_bit(char *result,int index,char value){
     value = value << pos;
     result[i] = result[i] | value;
 }
-
+// compressed the payload
 void compressed(struct connect_data* data,uint8_t ** compression_message,int c,int *number_bit,int * compress_length){
     int index = data->queue->com_dict->len[c];
     for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
@@ -335,7 +332,7 @@ void compressed(struct connect_data* data,uint8_t ** compression_message,int c,i
     }
 }
 
-
+// insert session_id to the array
 int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
     int find = 0;
     pthread_mutex_lock(&(session->lock));
@@ -355,7 +352,7 @@ int insert_session_id(session_t* session, uint32_t id,uint64_t offset, uint64_t 
     pthread_mutex_unlock(&(session->lock));
     return find;
 }
-
+//return whether a session is in the archive
 int find_archive(session_t* session, uint32_t id,uint64_t offset, uint64_t length,char* file_name){
     int find = 0;
     pthread_mutex_lock(&(session->lock));
@@ -369,7 +366,7 @@ int find_archive(session_t* session, uint32_t id,uint64_t offset, uint64_t lengt
     
 
 }
-
+//remove a session id is in the array
 void remove_session_id(session_t* archive,session_t* session, uint32_t id,uint64_t offset, uint64_t length, char * file_name){
     pthread_mutex_lock(&(session->lock));
     for (int i = 0; i < session->size; i++) {
@@ -390,12 +387,12 @@ void remove_session_id(session_t* archive,session_t* session, uint32_t id,uint64
     session->size--;
     pthread_mutex_unlock(&(session->lock));
 }
-
+//send error message to server
 void send_error_message(struct connect_data *data){
     uint8_t response[9] = {0xf0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0};
     write(data->socket_fd, response, 9);
 }
-
+//extract file size and file name
 char* extract_file_information(char *file,struct connect_data*data,uint64_t *file_size){
     char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
     strcpy(file_name, data->queue->msg);
@@ -406,7 +403,7 @@ char* extract_file_information(char *file,struct connect_data*data,uint64_t *fil
     *file_size = stat_t.st_size;
     return file_name;
 }
-
+// check whether a file is in directory
 int check_file_in_dir(char* file,struct connect_data* data){
     int number = 0;
     char** files = malloc(1);
@@ -429,7 +426,7 @@ int check_file_in_dir(char* file,struct connect_data* data){
     }
     return found;
 }
-
+// if file is not in the direcotry, send an error message
 char *check(char* file,struct connect_data* data,uint64_t* file_size){
     int found = check_file_in_dir(file, data);
     if (found == 0){
@@ -439,7 +436,7 @@ char *check(char* file,struct connect_data* data,uint64_t* file_size){
     char *file_name = extract_file_information(file, data,file_size);
     return file_name;
 }
-
+// send echo message back to client
 void send_echo_back(message_t *message,struct connect_data *data,uint64_t v){
     message->header.require_bit = 0;
     unsigned char header = transform_header(*message);
@@ -449,7 +446,7 @@ void send_echo_back(message_t *message,struct connect_data *data,uint64_t v){
 }
 
 
-
+//echo a meesage to client
 void echo_message(message_t* message,struct connect_data* data,uint64_t v){
     if (message->pay_load_length > 0)
         recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
@@ -549,7 +546,7 @@ void direct_list(message_t* message,struct connect_data* data){
         }
     }
 }
-
+//extra file size
 void file_size_query(message_t* message, struct connect_data*data){
     if (message->pay_load_length > 0)
         recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
@@ -562,6 +559,7 @@ void file_size_query(message_t* message, struct connect_data*data){
         uint64_t file_size = 0;
         char *file_name = extract_file_information(file, data,&file_size);
         if (message->header.require_bit == 0){
+            // if no need to require compression message
             uint8_t header = {0x50};
             write(data->socket_fd, &header, sizeof(header));
             uint8_t pay_load_len[9] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x08};
@@ -571,6 +569,7 @@ void file_size_query(message_t* message, struct connect_data*data){
                 write(data->socket_fd, &(pay_load[i]), 1);
             }
         } else{
+            // it is need to compress message
             message->header.type_digit = 0x5;
             message->header.compression_bit = 1;
             message->header.require_bit = 0;
@@ -605,6 +604,7 @@ void file_size_query(message_t* message, struct connect_data*data){
 }
 
 void retrieve_file(message_t* message,struct connect_data* data){
+    //if no need to decompressed
     if (message->header.compression_bit == 0){
         char *file_name;
         uint64_t offset = -1;;
@@ -629,6 +629,7 @@ void retrieve_file(message_t* message,struct connect_data* data){
         if (file != NULL){
             uint64_t range = offset + offset_length;
             if (range > file_size){
+                // range is larger than file size, send back error message
                 send_error_message(data);
             } else {
                 FILE *fp = fopen(file, "r");
@@ -639,13 +640,13 @@ void retrieve_file(message_t* message,struct connect_data* data){
                     if (!find_archive(data->queue->archive, session_id, offset, offset_length, file_name)){
                         int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                         if (!multiplex){
-    //                                       printf("should in\n");
-                        unsigned char header = {0x70};
-                        write(data->socket_fd, &header, 1);
-                        uint64_t pay_length = offset_length + 20;
-                        unsigned char*result = (unsigned char *)&pay_length;
-                        for(int i = 7;  i >= 0; i--){
-                            write(data->socket_fd, &result[i], 1);
+                            // if session id has exist in the array, then send back an type digit is enough
+                            unsigned char header = {0x70};
+                            write(data->socket_fd, &header, 1);
+                            uint64_t pay_length = offset_length + 20;
+                            unsigned char*result = (unsigned char *)&pay_length;
+                            for(int i = 7;  i >= 0; i--){
+                                write(data->socket_fd, &result[i], 1);
                         }
                         write(data->socket_fd, &session_id , 4);
                         write(data->socket_fd, &old_offset, 8);
@@ -715,10 +716,10 @@ void retrieve_file(message_t* message,struct connect_data* data){
             free(file_name);
         }
         } else{
+            // if is need to decompress
             if (message->pay_load_length > 0)
                 recv(data->socket_fd, message->pay_load, message->pay_load_length, 0);
-    //                    printf("4\n");
-    //                    printf("%llu\n",message.pay_load_length);
+            // receive whole pay load instead of receive separately
                 char *decompression_array = malloc(1);
                 int size = 0;
                 uint64_t length = (message->pay_load[message->pay_load_length - 1]);
@@ -748,8 +749,6 @@ void retrieve_file(message_t* message,struct connect_data* data){
                     memcpy(&session_id, decompression_array, 4);
                     uint64_t offset = parse((unsigned char*)&decompression_array[4]);
                     uint64_t offset_length = parse((unsigned char*)&decompression_array[12]);
-    //                    printf("%lu\n",(long)offset);
-    //                    printf("%lu\n",(long)offset_length);
                     uint64_t file_size = 0;
                     char *file_path = check(target_file, data, &file_size);
                     if (file_path != NULL){
@@ -973,6 +972,7 @@ int main(int argc, char** argv){
     struct sockaddr_in address;
     int opt = 1;
 //    char buffer[1024];
+    // create socket
     serversocket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (serversocket_fd < 0){
         perror("failed wrong\n");
