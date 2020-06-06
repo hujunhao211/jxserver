@@ -986,7 +986,7 @@ int main(int argc, char** argv){
         perror("borkens wrong\n");
         exit(1);
     }
-    if (listen(serversocket_fd, 4) < 0){
+    if (listen(serversocket_fd, 300) < 0){
         perror("listen wrong\n");
         exit(1);
     }
