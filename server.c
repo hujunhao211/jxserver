@@ -22,6 +22,10 @@
 #include <sys/stat.h>
 #define SIZE (100)
 #define ECHO (0x00)
+#define DIRECT_LIST (2)
+#define FILE_SIZE_QUERY (4)
+#define RETRIEVE_FILE (6)
+#define SHUTDOWN (8)
 #define SERVER_MSG ("compression.dict")
 //#include <libkern/OSByteOrder.h>
 //#define bswap_16(x) OSSwapInt16(x)
@@ -856,13 +860,13 @@ void *connection_handler(void *argv){
     //        printf("%x\n",message.pay_load_length);
             if(message.header.type_digit == ECHO){
                 echo_message(&message, data, v);
-            } else if(message.header.type_digit == 2){
+            } else if(message.header.type_digit == DIRECT_LIST){
                 direct_list(&message, data);
-            } else if(message.header.type_digit == 4){
+            } else if(message.header.type_digit == FILE_SIZE_QUERY){
                 file_size_query(&message, data);
-            } else if(message.header.type_digit == 6){
+            } else if(message.header.type_digit == RETRIEVE_FILE){
                 retrieve_file(&message, data);
-            } else if(message.header.type_digit == 8){
+            } else if(message.header.type_digit == SHUTDOWN){
                 if (message.pay_load_length > 0)
                     recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("8\n");
