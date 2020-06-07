@@ -109,18 +109,7 @@ typedef struct session{
 }session_t;
 
 
-// for thread pool to enqueue a work
-//void enqueue(linked_queue_t *queue, struct connect_data* data){
-//    node_t *newnode = malloc(sizeof(node_t));
-//    newnode->connect_data = data;
-//    newnode->next = NULL;
-//    if (queue->tail == NULL){
-//        queue->head = newnode;
-//    } else{
-//        queue->tail->next = newnode;
-//    }
-//    queue->tail = newnode;
-//}
+
 
 //change the order of the value
 uint64_t swap_uint64(uint64_t val) {
@@ -129,21 +118,7 @@ uint64_t swap_uint64(uint64_t val) {
     return (val << 32u) | (val >> 32u);
 }
 
-//for thread pool to dequeue a work
-//struct connect_data* dequeue(linked_queue_t *queue){
-//    if (queue->head == NULL){
-//        return NULL;
-//    } else{
-//        struct connect_data *result = queue->head->connect_data;
-//        node_t *temp = queue->head;
-//        queue->head = queue->head->next;
-//        if (queue->head == NULL) {
-//            queue->tail = NULL;
-//        }
-//        free(temp);
-//        return result;
-//    }
-//}
+
 
 //get the first byte of the header to extract typedigit
 unsigned char get_first_digit(unsigned int number){
@@ -865,10 +840,13 @@ void *connection_handler(void *argv){
     //        printf("type_digit: %x\n",(int)message.header.type_digit);
     //        printf("%x\n",message.pay_load_length);
             if(message.header.type_digit == ECHO){
+                //echo the mssage
                 echo_message(&message, data, v);
             } else if(message.header.type_digit == DIRECT_LIST){
+                //direct liist
                 direct_list(&message, data);
             } else if(message.header.type_digit == FILE_SIZE_QUERY){
+                //file size query
                 file_size_query(&message, data);
             } else if(message.header.type_digit == RETRIEVE_FILE){
                 retrieve_file(&message, data);
