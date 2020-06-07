@@ -21,6 +21,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #define SIZE (100)
+#define ECHO (0x00)
 #define SERVER_MSG ("compression.dict")
 //#include <libkern/OSByteOrder.h>
 //#define bswap_16(x) OSSwapInt16(x)
@@ -853,7 +854,7 @@ void *connection_handler(void *argv){
             message.pay_load = malloc(message.pay_load_length);
     //        printf("type_digit: %x\n",(int)message.header.type_digit);
     //        printf("%x\n",message.pay_load_length);
-            if(message.header.type_digit == 0x00){
+            if(message.header.type_digit == ECHO){
                 echo_message(&message, data, v);
             } else if(message.header.type_digit == 2){
                 direct_list(&message, data);
