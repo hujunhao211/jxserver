@@ -979,6 +979,7 @@ int main(int argc, char** argv){
         perror("listen wrong\n");
         exit(1);
     }
+    
     int shutdown_flag = 0;
     pthread_t *pthreads = calloc(SIZE, sizeof(pthread_t));
     struct compress_dic *com_dict = build_compression();
