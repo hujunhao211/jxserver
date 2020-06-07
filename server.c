@@ -1025,6 +1025,7 @@ int main(int argc, char** argv){
         d->archive = &archive;
         d->socket_fd = clientsocket_fd;
         d->com_dict = com_dict;
+        d->shutdown_flag  = &shutdown_flag;
         pthread_t thread;
         pthread_create(&thread, NULL, connection_handler, d);
     }
