@@ -20,7 +20,7 @@
 #include <endian.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#define SIZE (40)
+#define SIZE (300)
 #define SERVER_MSG ("compression.dict")
 //#include <libkern/OSByteOrder.h>
 //#define bswap_16(x) OSSwapInt16(x)
