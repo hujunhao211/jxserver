@@ -500,7 +500,7 @@ void direct_list(message_t* message,struct connect_data* data){
     struct dirent* ent;
     int pay_load_length = 0;
     unsigned char *respone = calloc(100, sizeof(char));
-    //                printf("msg:    is     %s\n",data->queue->msg);
+    //  retrieve the file from the directory
     if (message->header.compression_bit == 0){
         if ((dir = opendir(data->queue->msg)) != NULL){
             while ((ent = readdir(dir)) != NULL) {
@@ -515,6 +515,7 @@ void direct_list(message_t* message,struct connect_data* data){
             closedir(dir);
             respone[pay_load_length - 1] = 0x00;
             respone = realloc(respone, pay_load_length);
+            // if don't need to compressed
             if (message->header.require_bit == 0){
                 uint8_t response_header = 0x30;
                 send(data->socket_fd, &response_header, 1, 0);
