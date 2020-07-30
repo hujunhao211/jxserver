@@ -1,10 +1,3 @@
-//
-//  socket.c
-//  Test
-//
-//  Created by junhao hu on 2020/5/20.
-//  Copyright © 2020 junhao hu. All rights reserved.
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,17 +29,17 @@ typedef struct node{
     struct connect_data* connect_data;
 }node_t;
 
-//typedef struct linked_queue{
-//    struct node *head;
-//    struct node *tail;
-//    pthread_mutex_t queue_lock;
-//    pthread_cond_t queue_con;
-////    int shutdown_flag;
-////    char *msg;
-////    struct compress_dic *com_dict;
-////    struct session *session;
-////    struct session *archive;
-//}linked_queue_t;
+typedef struct linked_queue{
+    struct node *head;
+    struct node *tail;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_con;
+    int shutdown_flag;
+    char *msg;
+    struct compress_dic *com_dict;
+    struct session *session;
+    struct session *archive;
+}linked_queue_t;
 
 typedef struct b_file{
     uint32_t ip_v4_address;
@@ -57,12 +50,7 @@ typedef struct b_file{
 
 struct connect_data{
     int socket_fd;
-//    struct linked_queue* queue;
-    int *shutdown_flag;
-    char *msg;
-    struct compress_dic *com_dict;
-    struct session **session;
-    struct session **archive;
+    struct linked_queue* queue;
 };
 
 typedef struct package{
@@ -109,7 +97,18 @@ typedef struct session{
 }session_t;
 
 
-
+// for thread pool to enqueue a work
+void enqueue(linked_queue_t *queue, struct connect_data* data){
+    node_t *newnode = malloc(sizeof(node_t));
+    newnode->connect_data = data;
+    newnode->next = NULL;
+    if (queue->tail == NULL){
+        queue->head = newnode;
+    } else{
+        queue->tail->next = newnode;
+    }
+    queue->tail = newnode;
+}
 
 //change the order of the value
 uint64_t swap_uint64(uint64_t val) {
@@ -118,7 +117,21 @@ uint64_t swap_uint64(uint64_t val) {
     return (val << 32u) | (val >> 32u);
 }
 
-
+//for thread pool to dequeue a work
+struct connect_data* dequeue(linked_queue_t *queue){
+    if (queue->head == NULL){
+        return NULL;
+    } else{
+        struct connect_data *result = queue->head->connect_data;
+        node_t *temp = queue->head;
+        queue->head = queue->head->next;
+        if (queue->head == NULL) {
+            queue->tail = NULL;
+        }
+        free(temp);
+        return result;
+    }
+}
 
 //get the first byte of the header to extract typedigit
 unsigned char get_first_digit(unsigned int number){
@@ -304,12 +317,12 @@ void set_message_bit(char *result,int index,char value){
 }
 // compressed the payload
 void compressed(struct connect_data* data,uint8_t ** compression_message,int c,int *number_bit,int * compress_length){
-    int index = data->com_dict->len[c];
-    for (int j = index; j < data->com_dict->len[c + 1]; j++) {
+    int index = data->queue->com_dict->len[c];
+    for (int j = index; j < data->queue->com_dict->len[c + 1]; j++) {
         if (*number_bit == *compress_length * 8){
             *compression_message = realloc(*compression_message, ++(*compress_length));
         }
-        if (get_bit(data->com_dict->dict, j) == 1){
+        if (get_bit(data->queue->com_dict->dict, j) == 1){
             set_bit(*compression_message, (*number_bit)++);
         } else{
             clear_bit(*compression_message, (*number_bit)++);
@@ -379,8 +392,8 @@ void send_error_message(struct connect_data *data){
 }
 //extract file size and file name
 char* extract_file_information(char *file,struct connect_data*data,uint64_t *file_size){
-    char *file_name = malloc(strlen(data->msg) + 3 + strlen(file));
-    strcpy(file_name, data->msg);
+    char *file_name = malloc(strlen(data->queue->msg) + 3 + strlen(file));
+    strcpy(file_name, data->queue->msg);
     strcat(file_name, "/");
     strcat(file_name, file);
     struct stat stat_t;
@@ -394,7 +407,7 @@ int check_file_in_dir(char* file,struct connect_data* data){
     char** files = malloc(1);
     DIR *dir;
     struct dirent* ent;
-    if ((dir = opendir(data->msg)) != NULL){
+    if ((dir = opendir(data->queue->msg)) != NULL){
         while ((ent = readdir(dir)) != NULL) {
             if (ent->d_type == DT_REG){
                 files = realloc(files, (++number) * sizeof(char*));
@@ -482,7 +495,7 @@ void direct_list(message_t* message,struct connect_data* data){
     unsigned char *respone = calloc(100, sizeof(char));
     //  retrieve the file from the directory
     if (message->header.compression_bit == 0){
-        if ((dir = opendir(data->msg)) != NULL){
+        if ((dir = opendir(data->queue->msg)) != NULL){
             while ((ent = readdir(dir)) != NULL) {
                 if (ent->d_type == 8) {
                     for (int k = 0; k < strlen(ent->d_name); k++) {
@@ -623,8 +636,8 @@ void retrieve_file(message_t* message,struct connect_data* data){
                 unsigned char* file_content = malloc(offset_length);
                 fread(file_content, offset_length, 1, fp);
                 if (message->header.require_bit == 0) {
-                    if (!find_archive(*(data->archive), session_id, offset, offset_length, file_name)){
-                        int multiplex = insert_session_id(*(data->session), session_id, offset, offset_length,file_name);
+                    if (!find_archive(data->queue->archive, session_id, offset, offset_length, file_name)){
+                        int multiplex = insert_session_id(data->queue->session, session_id, offset, offset_length,file_name);
                         if (!multiplex){
                             // if session id has exist in the array, then send back an type digit is enough
                             unsigned char header = {0x70};
@@ -639,7 +652,7 @@ void retrieve_file(message_t* message,struct connect_data* data){
                         write(data->socket_fd, &old_offset_length, 8);
                         write(data->socket_fd, file_content, offset_length);
                         fclose(fp);
-                        remove_session_id(*(data->archive),*(data->session), session_id, offset, offset_length, file_name);
+                        remove_session_id(data->queue->archive,data->queue->session, session_id, offset, offset_length, file_name);
                     } else{
     //                                        printf("should not in1\n");
                         unsigned char header = {0x70};
@@ -710,7 +723,7 @@ void retrieve_file(message_t* message,struct connect_data* data){
                 int size = 0;
                 uint64_t length = (message->pay_load[message->pay_load_length - 1]);
     //                    printf("length is what %lu\n",(long)length);
-                tree_node_t *root = data->com_dict->tree->root;
+                tree_node_t *root = data->queue->com_dict->tree->root;
                 long gap = (message->pay_load_length - 1) * 8 - length;
                 for (int i = 0; i < gap; i++) {
                     if (get_bit(message->pay_load, i) == 1){
@@ -718,14 +731,14 @@ void retrieve_file(message_t* message,struct connect_data* data){
                         if (root->is_external == 1){
                             decompression_array = realloc(decompression_array, ++size);
                             decompression_array[size - 1] = root->content;
-                            root = data->com_dict->tree->root;
+                            root = data->queue->com_dict->tree->root;
                         }
                     } else{
                         root = root->left;
                         if (root->is_external == 1){
                             decompression_array = realloc(decompression_array, ++size);
                             decompression_array[size - 1] = root->content;
-                            root = data->com_dict->tree->root;
+                            root = data->queue->com_dict->tree->root;
                             }
                         }
                     }
@@ -817,7 +830,7 @@ void retrieve_file(message_t* message,struct connect_data* data){
 
 void *connection_handler(void *argv){
     struct connect_data *data = argv;
-    if (!*(data->shutdown_flag)){
+    if (!data->queue->shutdown_flag){
         while (1) {
             message_t message = {0};
             unsigned char buffer = 0;
@@ -840,13 +853,10 @@ void *connection_handler(void *argv){
     //        printf("type_digit: %x\n",(int)message.header.type_digit);
     //        printf("%x\n",message.pay_load_length);
             if(message.header.type_digit == ECHO){
-                //echo the mssage
                 echo_message(&message, data, v);
             } else if(message.header.type_digit == DIRECT_LIST){
-                //direct liist
                 direct_list(&message, data);
             } else if(message.header.type_digit == FILE_SIZE_QUERY){
-                //file size query
                 file_size_query(&message, data);
             } else if(message.header.type_digit == RETRIEVE_FILE){
                 retrieve_file(&message, data);
@@ -854,7 +864,7 @@ void *connection_handler(void *argv){
                 if (message.pay_load_length > 0)
                     recv(data->socket_fd, message.pay_load, message.pay_load_length, 0);
 //                printf("8\n");
-                *(data->shutdown_flag) = 1;
+                data->queue->shutdown_flag = 1;
                 break;
             } else {
                 if (message.pay_load_length > 0)
@@ -874,24 +884,24 @@ void *connection_handler(void *argv){
     return NULL;
 }
 
-//void *thread_function(void *arg){
-//    linked_queue_t *queue = (linked_queue_t *)arg;
-//    struct connect_data *pclient = NULL;
-//    while (1) {
-//        if(queue->shutdown_flag)
-//            break;
-//        pthread_mutex_lock(&queue->queue_lock);
-//        if ((pclient = dequeue(queue))== NULL){
-//            pthread_cond_wait(&queue->queue_con, &queue->queue_lock);
-//            pclient = dequeue(queue);
-//        }
-//        pthread_mutex_unlock(&queue->queue_lock);
-//        if (pclient != NULL){
-//            connection_handler((void*)pclient);
-//        }
-//    }
-//    return NULL;
-//}
+void *thread_function(void *arg){
+    linked_queue_t *queue = (linked_queue_t *)arg;
+    struct connect_data *pclient = NULL;
+    while (1) {
+        if(queue->shutdown_flag)
+            break;
+        pthread_mutex_lock(&queue->queue_lock);
+        if ((pclient = dequeue(queue))== NULL){
+            pthread_cond_wait(&queue->queue_con, &queue->queue_lock);
+            pclient = dequeue(queue);
+        }
+        pthread_mutex_unlock(&queue->queue_lock);
+        if (pclient != NULL){
+            connection_handler((void*)pclient);
+        }
+    }
+    return NULL;
+}
 
 
 b_file_t* read_binary(char *arg){
@@ -911,34 +921,34 @@ b_file_t* read_binary(char *arg){
     return content;
 }
 
-//linked_queue_t* initialisze_queue(){
-//    linked_queue_t *queue = malloc(sizeof(linked_queue_t));
-//    pthread_mutex_init(&(queue->queue_lock), NULL);
-//    pthread_cond_init(&queue->queue_con, NULL);
-//    queue->shutdown_flag = 0;
-//    queue->head = NULL;
-//    queue->tail = NULL;
-//    return queue;
-//}
+linked_queue_t* initialisze_queue(){
+    linked_queue_t *queue = malloc(sizeof(linked_queue_t));
+    pthread_mutex_init(&(queue->queue_lock), NULL);
+    pthread_cond_init(&queue->queue_con, NULL);
+    queue->shutdown_flag = 0;
+    queue->head = NULL;
+    queue->tail = NULL;
+    return queue;
+}
 
-//void free_queue(linked_queue_t *queue){
-//    while (queue->head != NULL) {
-//        struct connect_data *data = dequeue(queue);
-//        free(data);
-//    }
-//    free(queue->msg);
-//    free_tree(queue->com_dict->tree->root);
-//    free(queue->com_dict->tree);
-//    free(queue->session->session_ids);
-//    pthread_mutex_destroy(&(queue->session->lock));
-//    free(queue->session);
-//    free(queue->archive->session_ids);
-//    pthread_mutex_destroy(&(queue->archive->lock));
-//    free(queue->archive);
-//    free(queue->com_dict->len);
-//    free(queue->com_dict);
-//    free(queue);
-//}
+void free_queue(linked_queue_t *queue){
+    while (queue->head != NULL) {
+        struct connect_data *data = dequeue(queue);
+        free(data);
+    }
+    free(queue->msg);
+    free_tree(queue->com_dict->tree->root);
+    free(queue->com_dict->tree);
+    free(queue->session->session_ids);
+    pthread_mutex_destroy(&(queue->session->lock));
+    free(queue->session);
+    free(queue->archive->session_ids);
+    pthread_mutex_destroy(&(queue->archive->lock));
+    free(queue->archive);
+    free(queue->com_dict->len);
+    free(queue->com_dict);
+    free(queue);
+}
 
 
 int main(int argc, char** argv){
@@ -979,34 +989,39 @@ int main(int argc, char** argv){
         perror("listen wrong\n");
         exit(1);
     }
-    
-    int shutdown_flag = 0;
+    linked_queue_t *queue = initialisze_queue();
     pthread_t *pthreads = calloc(SIZE, sizeof(pthread_t));
-    struct compress_dic *com_dict = build_compression();
+    queue->msg = file->message;
+    for (int i = 0; i < SIZE; i++) {
+        pthread_create(&pthreads[i], NULL, thread_function, (void*)queue);
+    }
+    queue->com_dict = build_compression();
     session_t *session = malloc(sizeof(session_t));
     session->capacity = 20;
     session->size = 0;
     session->session_ids = calloc(20, sizeof(session_segment_t));
     pthread_mutex_init(&(session->lock), NULL);
+    queue->session = session;
     session_t *archive = malloc(sizeof(session_t));
     archive->capacity = 20;
     archive->size = 0;
     archive->session_ids = calloc(20, sizeof(session_segment_t));
     pthread_mutex_init(&(archive->lock), NULL);
+    queue->archive = archive;
     while (1) {
-        if (shutdown_flag)
+        if (queue->shutdown_flag)
             break;
         uint32_t addrlen = sizeof(struct sockaddr_in);
         clientsocket_fd = accept(serversocket_fd, (struct sockaddr*)&address, &addrlen);
         struct connect_data *d = malloc(sizeof(struct connect_data));
-        d->msg = file->message;
-        d->session = &session;
-        d->archive = &archive;
         d->socket_fd = clientsocket_fd;
-        d->com_dict = com_dict;
-        d->shutdown_flag  = &shutdown_flag;
-        pthread_t thread;
-        pthread_create(&thread, NULL, connection_handler, d);
+        d->queue = queue;
+        pthread_mutex_lock(&queue->queue_lock);
+        enqueue(queue, d);
+        pthread_cond_signal(&queue->queue_con);
+        pthread_mutex_unlock(&queue->queue_lock);
+//        pthread_t thread;
+//        pthread_create(&thread, NULL, connection_handler, d);
     }
     for (size_t i = 0; i < SIZE; i++) {
         if (pthread_join(pthreads[i], NULL) != 0) {
@@ -1014,6 +1029,7 @@ int main(int argc, char** argv){
             return 1;
         }
     }
+    free_queue(queue);
     free(file);
     close(serversocket_fd);
     return 0;
